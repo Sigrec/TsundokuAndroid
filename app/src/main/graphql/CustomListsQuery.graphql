@@ -1,0 +1,5 @@
+query GetCustomLists($userId: Int!) {
+    MediaList(userId: $userId, type: MANGA) {
+        customLists
+    }
+}

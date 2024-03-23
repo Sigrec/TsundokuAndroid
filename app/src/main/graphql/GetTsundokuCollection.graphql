@@ -1,0 +1,30 @@
+query getTsundokuCollection($username: String, $userId: Int, $titleSort: [MediaListSort]!) {
+    MediaListCollection(userName: $username, userId: $userId, type: MANGA, sort: $titleSort) {
+        hasNextChunk
+        lists {
+            name
+            entries {
+                ...mediaListEntry
+            }
+        }
+    }
+}
+
+fragment mediaListEntry on MediaList {
+    mediaId
+    media {
+        id
+        countryOfOrigin
+        format
+        volumes
+        chapters
+        status(version: 2)
+        coverImage {
+            medium
+        }
+        title {
+            userPreferred
+        }
+    }
+    notes
+}

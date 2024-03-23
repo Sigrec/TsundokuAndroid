@@ -1,0 +1,13 @@
+query Viewer {
+    Viewer {
+        id
+        name
+        options {
+            titleLanguage
+        }
+        avatar {
+            medium
+        }
+        bannerImage
+    }
+}

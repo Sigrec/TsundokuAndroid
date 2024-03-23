@@ -1,0 +1,13 @@
+query UserQuery($username: String!) {
+    User(name: $username) {
+        id
+        name
+        options {
+            titleLanguage
+        }
+        avatar {
+            medium
+        }
+        bannerImage
+    }
+}

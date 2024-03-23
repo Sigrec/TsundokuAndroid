@@ -1,0 +1,16 @@
+query GetMediaEntry($title: String, $type: MediaFormat) {
+    Media(search: $title, format: $type) {
+        id
+        countryOfOrigin
+        format
+        volumes
+        chapters
+        status(version: 2)
+        coverImage {
+            medium
+        }
+        title {
+            userPreferred
+        }
+    }
+}

@@ -1,0 +1,5 @@
+mutation UpdateMediaNotes($mediaId: Int, $notes: String) {
+    SaveMediaListEntry(mediaId: $mediaId, notes: $notes) {
+        id
+    }
+}

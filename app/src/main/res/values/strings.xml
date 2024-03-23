@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Tsundoku</string>
+    <string name="login_icon_desc">Login Icon</string>
+    <string name="login_title">Login To Your AniList Account</string>
+    <string name="login_button_text">Log In</string>
+    <string name="anilist">AniList</string>
+    <string name="guidelines">Guidelines</string>
+</resources>
