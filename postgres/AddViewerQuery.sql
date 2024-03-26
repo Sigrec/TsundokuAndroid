@@ -1,0 +1,1 @@
+INSERT INTO viewer (id) VALUES ( /* AniList ID */ )

@@ -9,12 +9,18 @@ import com.tsundoku.TSUNDOKU_SCHEME
 import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
+import com.tsundoku.models.Media
+import com.tsundoku.models.TsundokuItem
+import com.tsundoku.models.ViewerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,8 +30,21 @@ import javax.inject.Inject
 @HiltViewModel
 class ViewerViewModel @Inject constructor(
     private val viewerRepo: ViewerRepositoryImpl,
-    private val preferencesRepo: PreferencesRepositoryImpl
+    private val preferencesRepo: PreferencesRepositoryImpl,
 ) : ViewModel() {
+
+    private val _viewerState = MutableStateFlow(ViewerState())
+    val viewerState : StateFlow<ViewerState> = _viewerState.asStateFlow()
+
+    fun setViewerId(id: Int) { _viewerState.update { it.copy(viewerId = id) } }
+    fun getViewerId(): Int = viewerState.value.viewerId
+
+    fun setCurrencyCode(code: String) { _viewerState.update { it.copy(currencyCode = code) } }
+    fun setCurrencySymbol(symbol: String) { _viewerState.update { it.copy(currencySymbol = symbol) } }
+
+
+    fun setTsundokuCollection(newCollection: MutableList<TsundokuItem>) = _viewerState.update { it.copy(collection = newCollection) }
+    fun sortTsundokuCollection() { viewerState.value.collection?.sortBy { it.title } }
 
     /**
      * Whether user opening the app has successfully oauth'd
@@ -35,7 +54,8 @@ class ViewerViewModel @Inject constructor(
     /**
      * Authenticated users information, represented as a viewer in AniList GraphQL
      */
-    val aniListViewer = viewerRepo.getViewer().asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+    val aniListViewer = viewerRepo.getAniListViewer().asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+
 
     /**
      * Gets the logged in users custom list(s)
@@ -72,18 +92,41 @@ class ViewerViewModel @Inject constructor(
     }
 
     /**
-     *
+     * Updates the viewers notes for a specific series
+     * @param mediaId The unique id of the media to update
+     * @param newNote The new note to update to for the media
      */
-    fun updateMediaNotes(mediaId: Int?, newNote: String) {
+    fun updateAniListMediaNotes(mediaId: String, newNote: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            viewerRepo.updateMediaNotes(mediaId = mediaId, newNote = newNote).collect {
+            viewerRepo.updateAniListMediaNotes(mediaId = mediaId.toInt(), newNote = newNote)
+            .collect {
                 if (it.isSuccess) {
                     Log.i("ANILIST", "Successfully Updated Media $mediaId")
-                }
-                else {
+                } else {
                     Log.e("ANILIST", "Updating Media $mediaId Failed -> $it")
                 }
             }
         }
+    }
+
+    suspend fun updateDatabaseMedia(viewerId: Int, mediaId: String, updateMap: Map<String, Any?>) {
+        viewerRepo.updateMedia(viewerId, mediaId, updateMap)
+    }
+
+    suspend fun getCurrencyCode(viewerId: Int): String? {
+       return viewerRepo.getDatabaseViewerCurrencyCode(viewerId)?.currency
+    }
+
+    suspend fun insertDatabaseViewer(viewerId: Int) {
+        viewerRepo.insertDatabaseViewer(viewerId)
+    }
+
+    // REMEMBER TO GET THE CURRENT ANILIST STATUS?
+    suspend fun insertNewMedia(mediaList: List<Media>) {
+        viewerRepo.insertNewMedia(mediaList)
+    }
+
+    suspend fun getDatabaseMediaList(viewerId: Int): List<Media> {
+        return viewerRepo.getMediaList(viewerId)
     }
 }

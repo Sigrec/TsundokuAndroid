@@ -1,0 +1,1 @@
+UPDATE viewer SET currencycode = /* Currency Code */ WHERE id = /* AniList User Id */

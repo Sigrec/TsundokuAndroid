@@ -1,0 +1,1 @@
+DELETE FROM media WHERE viewer_id = /* AniList UserId */ AND media_id = /* AniList MediaId | MangaDex UUID & 36 char limit */

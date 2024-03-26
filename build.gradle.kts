@@ -6,4 +6,5 @@ plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.google.ksp) apply false
     alias(libs.plugins.apollo) apply false
+    alias(libs.plugins.supabase.serialization) apply false
 }

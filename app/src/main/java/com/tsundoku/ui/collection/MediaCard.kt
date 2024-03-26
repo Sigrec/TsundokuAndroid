@@ -39,24 +39,24 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.tsundoku.ANILIST_MANGA_URL
-import com.tsundoku.GetTsundokuCollectionQuery
+import com.tsundoku.MANGADEX_MANGA_URL
 import com.tsundoku.anilist.user.UserViewModel
 import com.tsundoku.interFont
-import com.tsundoku.ui.model.CollectionUiState
-import com.tsundoku.ui.model.MediaModel
+import com.tsundoku.models.CollectionUiState
+import com.tsundoku.models.TsundokuItem
+import com.tsundoku.models.Website
 import com.tsundoku.ui.theme.TextColorPrimary
 import com.tsundoku.ui.theme.TextColorSecondary
 
 
 @Composable
 fun MediaCard(
-    entry: GetTsundokuCollectionQuery.Entry,
+    item: TsundokuItem,
     index: Int,
     userViewModel: UserViewModel,
     collectionUiState: CollectionUiState,
     uriHandler: UriHandler
 ) {
-    val media = entry.mediaListEntry.media!!
     ElevatedCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1F232D)),
@@ -69,9 +69,16 @@ fun MediaCard(
             AsyncImage(
                 modifier = Modifier
                     .fillMaxWidth(0.22f)
-                    .clickable { if (collectionUiState.curEditingMediaIndex == -1) uriHandler.openUri("$ANILIST_MANGA_URL${media.id}") },
+                    .clickable {
+                        if (collectionUiState.curEditingMediaIndex == -1) {
+                            when (item.website) {
+                                Website.ANILIST -> uriHandler.openUri("$ANILIST_MANGA_URL/${item.media.mediaId}")
+                                Website.MANGADEX -> uriHandler.openUri("$MANGADEX_MANGA_URL/${item.media.mediaId}")
+                            }
+                        }
+                    },
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(media.coverImage!!.medium.toString())
+                    .data(item.imageUrl)
                     .crossfade(true)
                     .build(),
                 contentDescription = null,
@@ -85,7 +92,7 @@ fun MediaCard(
                     .weight(1f)
             ) {
                 Text(
-                    text = MediaModel.getCorrectFormat(media.format!!.name, media.countryOfOrigin.toString()),
+                    text = item.format,
                     textAlign = TextAlign.Start,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -93,7 +100,7 @@ fun MediaCard(
                     fontFamily = interFont
                 )
                 Text(
-                    text = media.title!!.userPreferred!!,
+                    text = item.title,
                     modifier = Modifier
                         //.offset(y = (-4).dp)
                         .clickable { if (collectionUiState.curEditingMediaIndex == -1) userViewModel.setCurEditingMediaIndex(index) },
@@ -157,7 +164,7 @@ fun MediaCard(
                                 modifier = Modifier
                                     .background(Color(0xFF42B1EA))
                                     .fillMaxHeight()
-                                    .fillMaxWidth(0.4f) // TODO - Set to (curVolumes / maxVolumes).toFloat()
+                                    .fillMaxWidth((item.media.curVolumes / item.media.maxVolumes).toFloat())
                             )
                         }
                     }
@@ -174,7 +181,7 @@ fun MediaCard(
                         modifier = Modifier
                             .height(35.dp)
                             .width(35.dp),
-                        onClick = { /* userViewModel.setCurEditingMediaIndex(-1) */ },
+                        onClick = { userViewModel.setCurEditingMediaIndex(-1) },
                     ) {
                         Text(
                             text = "-",

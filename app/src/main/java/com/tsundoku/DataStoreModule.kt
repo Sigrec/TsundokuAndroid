@@ -1,4 +1,4 @@
-package com.tsundoku.anilist
+package com.tsundoku
 
 import android.content.Context
 import androidx.datastore.core.DataStore

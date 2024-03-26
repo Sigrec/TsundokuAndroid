@@ -1,0 +1,1 @@
+SELECT 1 FROM viewer WHERE id = /* AniList UserId */ LIMIT 1

@@ -1,27 +1,27 @@
 [versions]
-agp = "8.3.0"
-kotlin = "1.9.0"
+agp = "8.3.1"
+kotlin = "1.9.23"
 coreKtx = "1.12.0"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.7.0"
-activityCompose = "1.8.2"
-composeBom = "2024.02.02"
+activityCompose = "2.7.0"
+composeBom = "2024.03.00"
 retrofit = "2.9.0"
 kotlinxCorourtine = "1.8.0"
-# netOpenID = "0.11.1"
 hilt = "2.51"
 hilt-ext = "1.2.0"
 datastore = "1.0.0"
-ksp = "1.9.0-1.0.13"
+ksp = "1.9.22-1.0.17"
 destinationsKsp = "1.11.2-alpha"
 apollo = "3.8.2"
 appcompat = "1.6.1"
 material = "1.11.0"
 gson = "2.10.1"
 coil = "2.6.0"
-constraintlayout = "2.1.4"
+supabase = "2.2.2"
+ktor = "2.3.9"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -68,12 +68,17 @@ apollo-cache = { group = "com.apollographql.apollo3", name = "apollo-normalized-
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson"}
 
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil"}
-androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+
+supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
+postgres-kt = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
+ktor = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
+
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-google-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp"}
-apollo = { id = "com.apollographql.apollo3", version.ref = "apollo"}
+google-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+apollo = { id = "com.apollographql.apollo3", version.ref = "apollo" }
+supabase-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

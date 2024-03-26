@@ -1,0 +1,1 @@
+SELECT media_id, cur_volumes, max_volumes, cost FROM media WHERE viewer_id = /* AniList User Id */

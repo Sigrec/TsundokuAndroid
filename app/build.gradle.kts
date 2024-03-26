@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.ksp)
     alias(libs.plugins.apollo)
+    alias(libs.plugins.supabase.serialization)
 }
 
 android {
@@ -44,7 +45,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.11"
     }
     packaging {
         resources {
@@ -76,6 +77,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.datastore)
     implementation(libs.gson)
+
+    // Supabase
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.postgres.kt)
+    implementation(libs.ktor)
 
     // Retrofit2
     implementation(libs.com.squareup.retrofit2)

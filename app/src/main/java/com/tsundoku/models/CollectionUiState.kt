@@ -1,4 +1,4 @@
-package com.tsundoku.ui.model
+package com.tsundoku.models
 
 data class CollectionUiState(
     val onViewer: Boolean = true,

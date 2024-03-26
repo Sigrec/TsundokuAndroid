@@ -7,7 +7,7 @@ import com.tsundoku.anilist.viewer.ViewerRepositoryImpl
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
 import com.tsundoku.type.MediaListSort
-import com.tsundoku.ui.model.CollectionUiState
+import com.tsundoku.models.CollectionUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

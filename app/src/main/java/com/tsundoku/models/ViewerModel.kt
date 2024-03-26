@@ -1,6 +1,8 @@
-package com.tsundoku.data
+package com.tsundoku.models
 
-class CleanData {
+import kotlinx.serialization.Serializable
+
+class ViewerModel {
     companion object {
         fun parseCustomLists(customListsOutput: StringBuilder): MutableList<String> {
             return customListsOutput.deleteCharAt(0).deleteCharAt(customListsOutput.length - 1).split(", ").map {
@@ -11,3 +13,12 @@ class CleanData {
         }
     }
 }
+
+@Serializable
+data class Viewer(
+    val id: Int? = null,
+    /**
+     * Currency code the viewer currently uses
+     */
+    val currency: String,
+)

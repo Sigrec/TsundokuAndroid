@@ -18,8 +18,8 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootNavGraph
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.tsundoku.anilist.viewer.ViewerViewModel
-import com.tsundoku.data.CleanData
 import com.tsundoku.destinations.CollectionScreenDestination
+import com.tsundoku.models.ViewerModel
 import com.tsundoku.ui.LoginScreen
 import com.tsundoku.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -130,6 +130,7 @@ fun LaunchPane(
         val viewer by viewerViewModel.aniListViewer.collectAsState()
         if (viewer.data != null) {
             // Log.d("ANILIST", "${viewer.data!!.name} | ${viewer.data!!.id} | ${viewer.data!!.avatar!!.medium} | ${viewer.data!!.bannerImage} | https://anilist.co/user/${viewer.data!!.id}")
+
             val customLists by viewerViewModel.getCustomLists(viewer.data!!.id).collectAsState()
             customLists.data?.customLists?.run {
                 val customListsOutput = StringBuilder(this.toString().trim())
@@ -140,10 +141,10 @@ fun LaunchPane(
                 }
                 else {
                     Log.d("ANILIST", "Creating Tsundoku Custom List for \"${viewer.data!!.name}\"")
-                    viewerViewModel.addTsundokuList(CleanData.parseCustomLists(customListsOutput))
+                    viewerViewModel.addTsundokuList(ViewerModel.parseCustomLists(customListsOutput))
                 }
             }
-            // CollectionScreenDestination.NavArgs(viewer.data!!.id, viewer.data!!.options!!.titleLanguage!!.name)
+
             navigator.navigate(CollectionScreenDestination(viewer.data!!.id, viewer.data!!.options!!.titleLanguage!!.name))
         }
         else {

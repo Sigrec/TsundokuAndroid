@@ -44,13 +44,17 @@ import androidx.compose.ui.unit.sp
 import com.tsundoku.R
 import com.tsundoku.anilist.user.UserViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
-import com.tsundoku.fragment.MediaListEntry
 import com.tsundoku.interFont
+import com.tsundoku.models.MediaModel
+import com.tsundoku.models.TsundokuItem
+import com.tsundoku.models.Website
 import com.tsundoku.type.MediaListSort
-import com.tsundoku.ui.model.MediaModel
 import com.tsundoku.ui.theme.TextColorPrimary
 import com.tsundoku.ui.theme.TextColorSecondary
 import com.tsundoku.ui.theme.TsundokuBackgroundFade
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * The screen that allows users to update information about a particular series
@@ -61,15 +65,16 @@ import com.tsundoku.ui.theme.TsundokuBackgroundFade
 // TODO - Change to Dialog?
 @Composable
 fun MediaEditScreen(
-    entry: MediaListEntry,
+    item: TsundokuItem,
+    currencySymbol: String,
+    coroutineScope: CoroutineScope,
     userViewModel: UserViewModel,
     viewerViewModel: ViewerViewModel
 ) {
-    val title = entry.media!!.title!!.userPreferred.toString()
-    var notes: String by rememberSaveable { mutableStateOf(entry.notes ?: "") }
-    var cost: String by rememberSaveable { mutableStateOf("500.00") } // Change to Decimal?
-    var curVolumes: String by rememberSaveable { mutableStateOf("8") }
-    var maxVolumes: String by rememberSaveable { mutableStateOf("20") }
+    var notes: String by rememberSaveable { mutableStateOf(item.notes) }
+    var cost: String by rememberSaveable { mutableStateOf(item.media.cost.toString()) }
+    var curVolumes: String by rememberSaveable { mutableStateOf(item.media.curVolumes.toString()) }
+    var maxVolumes: String by rememberSaveable { mutableStateOf(item.media.maxVolumes.toString()) }
 
     Column (
         modifier = Modifier
@@ -88,7 +93,7 @@ fun MediaEditScreen(
             )
             // TODO - Need to add a little padding top align vertically
             Text(
-                text = MediaModel.getCorrectFormat(entry.media.format!!.name, entry.media.countryOfOrigin.toString()),
+                text = item.format,
                 modifier = Modifier
                     .width(IntrinsicSize.Min)
                     .padding(5.dp, 5.dp, 0.dp, 0.dp),
@@ -101,7 +106,7 @@ fun MediaEditScreen(
         }
         // TODO - Add clickable to go to AL series page to title
         Text(
-            text = title,
+            text = item.title,
             modifier = Modifier.height(IntrinsicSize.Min),
             textAlign = TextAlign.Start,
             fontWeight = FontWeight.Bold,
@@ -112,7 +117,7 @@ fun MediaEditScreen(
         )
         OutlinedTextField(
             value = cost,
-            leadingIcon = { Text("$") },
+            leadingIcon = { Text(currencySymbol, color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
             onValueChange = { if (it.isEmpty() || (it.length <= 25 && MediaModel.costRegex.matches(it))) cost = it },
             label = { Text("Cost") },
             modifier = Modifier
@@ -140,8 +145,9 @@ fun MediaEditScreen(
         ) {
             OutlinedTextField(
                 value = curVolumes,
-                onValueChange = { if (it.length <= 3) curVolumes = it },
-                label = { Text("Cur Volumes") },
+                // TODO - Fix issue where it crashes if empty
+                onValueChange = { if (it.length <= 3 && maxVolumes.toInt() >= it.toInt()) curVolumes = it },
+                label = { Text("Cur Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
                 modifier = Modifier
                     .height(60.dp)
                     .weight(1f),
@@ -163,8 +169,11 @@ fun MediaEditScreen(
             )
             OutlinedTextField(
                 value = maxVolumes,
-                onValueChange = { if (it.length <= 3) maxVolumes = it },
-                label = { Text("Max Volumes") },
+                // TODO - Fix issue where it crashes if empty
+                onValueChange = {
+                    if (it.length <= 3 && curVolumes.toInt() <= it.toInt()) maxVolumes = it
+                },
+                label = { Text("Max Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
                 modifier = Modifier
                     .height(60.dp)
                     .weight(1f),
@@ -188,7 +197,7 @@ fun MediaEditScreen(
         OutlinedTextField(
             value = notes,
             onValueChange = { notes = it },
-            label = { Text("Notes", fontWeight = FontWeight.Bold) },
+            label = { Text("Notes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
             modifier = Modifier
                 .padding(0.dp, 5.dp, 0.dp, 10.dp)
                 .weight(1f)
@@ -225,7 +234,35 @@ fun MediaEditScreen(
                     .border(2.dp, Color(0xFFC8C9E4), RoundedCornerShape(16.dp))
                     .height(35.dp)
                     .width(110.dp),
-                onClick = { if(entry.notes != notes) viewerViewModel.updateMediaNotes(entry.mediaId, notes) },
+                onClick = {
+                    val updateMap = mutableMapOf<String, Any?>("notes" to null, "curVolumes" to null, "maxVolumes" to null, "notes" to null)
+                    if(item.notes != notes) {
+                        item.notes = notes
+                        when(item.website) {
+                            Website.ANILIST -> viewerViewModel.updateAniListMediaNotes(item.media.mediaId, notes)
+                            Website.MANGADEX -> { updateMap["notes"] = notes }
+                        }
+                    }
+
+                    if(item.media.curVolumes != curVolumes.toInt()) {
+                        item.media.curVolumes = curVolumes.toInt()
+                        updateMap["curVolumes"] = curVolumes
+                    }
+                    if(item.media.maxVolumes != maxVolumes.toInt()) {
+                        item.media.maxVolumes = maxVolumes.toInt()
+                        updateMap["maxVolumes"] = maxVolumes
+                    }
+                    if(item.media.cost != cost.toDouble()) {
+                        item.media.cost = cost.toDouble()
+                        updateMap["cost"] = cost
+                    }
+
+                    if (updateMap.isNotEmpty()) {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            viewerViewModel.updateDatabaseMedia(viewerViewModel.getViewerId(), item.media.mediaId, updateMap)
+                        }
+                    }
+                },
             ) {
                 Text(
                     "Save",
