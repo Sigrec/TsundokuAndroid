@@ -1,5 +1,6 @@
 package com.tsundoku.anilist.viewer
 
+import android.util.Log
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.cache.normalized.FetchPolicy
@@ -8,13 +9,16 @@ import com.tsundoku.APP_NAME
 import com.tsundoku.AddTsundokuListMutation
 import com.tsundoku.DATABASE_MEDIA_TABLE
 import com.tsundoku.DATABASE_VIEWER_TABLE
+import com.tsundoku.DeleteMediaFromTsundokuMutation
 import com.tsundoku.GetCustomListsQuery
+import com.tsundoku.GetMediaCustomListsQuery
 import com.tsundoku.UpdateMediaNotesMutation
 import com.tsundoku.ViewerQuery
 import com.tsundoku.anilist.AuthorizedClient
 import com.tsundoku.extensions.asResult
 import com.tsundoku.models.Media
 import com.tsundoku.models.Viewer
+import com.tsundoku.models.VolumeUpdateMedia
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -28,28 +32,6 @@ class ViewerRepositoryImpl @Inject constructor(
     private val aniListClient: ApolloClient,
     private val supabase: SupabaseClient
 ): ViewerRepository {
-    private val mediaId = 12567
-    val getMediaIdQuery =
-        """
-            query UpdateTsundokuCollection {
-            	MediaList(id: 108832) {
-                  mediaId
-              }
-            }
-
-        """.trimIndent()
-
-    val addEntryToCollectionMutation = // Add "$"
-        """
-            mutation updateMangaEntry {
-              SaveMediaListEntry(mediaId: $mediaId, customLists: []) {
-                mediaId
-                customLists
-              }
-            }
-
-        """.trimIndent()
-
     /**
      * Gets the current authenticated viewer
      */
@@ -62,11 +44,22 @@ class ViewerRepositoryImpl @Inject constructor(
     /**
      * Gets the current "custom lists" for the authenticated user
      */
-    override fun getCustomLists(userId: Int) = aniListClient
+    override fun getViewerCustomLists(userId: Int) = aniListClient
             .query(GetCustomListsQuery(userId = userId))
             .fetchPolicy(FetchPolicy.CacheAndNetwork)
             .toFlow()
             .asResult { it.MediaList!! }
+
+    /**
+     * Gets the custom lists for a given media for the authenticated user
+     * @param viewerId The authenticated users AniList ID
+     * @param mediaId The unique id of the media to update
+     */
+    override fun getMediaCustomLists(viewerId: Int, mediaId: Int) = aniListClient
+        .query(GetMediaCustomListsQuery(viewerId = viewerId, mediaId = mediaId))
+        .fetchPolicy(FetchPolicy.CacheAndNetwork)
+        .toFlow()
+        .asResult { it.MediaList!! }
 
     /**
      * Adds "Tsundoku" custom list to the authenticated users "custom lists"
@@ -88,6 +81,12 @@ class ViewerRepositoryImpl @Inject constructor(
      */
     override fun updateAniListMediaNotes(mediaId: Int, newNote: String) = authAniListClient
         .mutation(UpdateMediaNotesMutation(mediaId = Optional.presentIfNotNull(mediaId), notes = Optional.present(newNote)))
+        .fetchPolicy(FetchPolicy.CacheAndNetwork)
+        .toFlow()
+        .asResult { it.SaveMediaListEntry!! }
+
+    override fun deleteAniListMediaFromCollection(mediaId: Int, customLists: List<String>) = authAniListClient
+        .mutation(DeleteMediaFromTsundokuMutation(mediaId = mediaId, customLists = customLists))
         .fetchPolicy(FetchPolicy.CacheAndNetwork)
         .toFlow()
         .asResult { it.SaveMediaListEntry!! }
@@ -128,6 +127,25 @@ class ViewerRepositoryImpl @Inject constructor(
             filter {
                 eq("mediaId", mediaId)
                 eq("viewerId", viewerId)
+            }
+        }
+    }
+
+    override suspend fun batchCurVolumesUpdateMedia(viewerId: Int, updateList: MutableList<VolumeUpdateMedia>) {
+        Log.d("Tsundoku", "Batch Updating $updateList for Viewer $viewerId")
+        supabase.from(DATABASE_MEDIA_TABLE).upsert(updateList) {
+            filter {
+                eq("viewerId", viewerId)
+            }
+        }
+    }
+
+    override suspend fun deleteMedia(viewerId: Int, deleteList: List<String>) {
+        Log.d("Supabase", "Deleting $deleteList for Viewer $viewerId")
+        supabase.from(DATABASE_MEDIA_TABLE).delete {
+            filter {
+                eq("viewerId", viewerId)
+                isIn("mediaId", deleteList)
             }
         }
     }

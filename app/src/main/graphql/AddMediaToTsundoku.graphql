@@ -1,0 +1,5 @@
+mutation AddMediaToTsundoku($mediaId: Int!) {
+    SaveMediaListEntry(mediaId: $mediaId, customLists: ["Tsundoku"]) {
+        id
+    }
+}

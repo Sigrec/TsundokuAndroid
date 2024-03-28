@@ -1,4 +1,4 @@
-package com.tsundoku.anilist.user
+package com.tsundoku.anilist.collection
 
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.Optional
@@ -9,7 +9,6 @@ import com.tsundoku.GetCustomListsQuery
 import com.tsundoku.GetTsundokuCollectionQuery
 import com.tsundoku.ViewerQuery
 import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
-import com.tsundoku.anilist.viewer.UserRepository
 import com.tsundoku.extensions.asResult
 import com.tsundoku.type.MediaListSort
 import kotlinx.coroutines.flow.Flow
@@ -17,10 +16,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class UserRepositoryImpl @Inject constructor(
+class CollectionRepositoryImpl @Inject constructor(
     private val aniListClient: ApolloClient,
     preferencesRepo: PreferencesRepositoryImpl
-): UserRepository {
+): CollectionRepository {
     override fun getUserByUsername(): Flow<Result<ViewerQuery.Viewer>> {
         TODO("Not yet implemented")
     }

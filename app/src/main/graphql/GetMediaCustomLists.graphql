@@ -1,0 +1,5 @@
+query GetMediaCustomLists($viewerId: Int!, $mediaId: Int!) {
+    MediaList(userId: $viewerId, mediaId: $mediaId) {
+        customLists
+    }
+}

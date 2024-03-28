@@ -25,3 +25,14 @@ fun <T: Operation.Data, R> Flow<ApolloResponse<T>>.asResult(transform: (T) -> R)
     }
 
 fun <T: Operation.Data> Flow<ApolloResponse<T>>.asResult(): Flow<Result<T>> = this.asResult { it }
+
+//@OptIn(ExperimentalCoroutinesApi::class)
+//fun <R> Flow<List<TsundokuItem>>.asResult(transform: (List<TsundokuItem>) -> R): Flow<Result<R>> = this
+//    .mapLatest { response ->
+//        Result.success(transform(response))
+//    }
+//    .catch { exception ->
+//        emit(Result.failure(exception))
+//    }
+//
+//fun Flow<List<TsundokuItem>>.asResult(): Flow<Result<List<TsundokuItem>>> = this.asResult { it }

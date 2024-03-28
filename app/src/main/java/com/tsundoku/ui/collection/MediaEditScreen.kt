@@ -1,5 +1,7 @@
 package com.tsundoku.ui.collection
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -42,7 +45,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tsundoku.R
-import com.tsundoku.anilist.user.UserViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.interFont
 import com.tsundoku.models.MediaModel
@@ -56,31 +58,28 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// TODO - Fix styling
 /**
  * The screen that allows users to update information about a particular series
+ * @param item The TsundokuItem containing all of the card data
  */
-// TODO - Fix the onFocused colors for all text boxes
-// TODO - Make it so users can only type numbers into cur and max volumes and the max is 3 digits
-// TODO - Fix styling
-// TODO - Change to Dialog?
 @Composable
 fun MediaEditScreen(
     item: TsundokuItem,
-    currencySymbol: String,
     coroutineScope: CoroutineScope,
-    userViewModel: UserViewModel,
     viewerViewModel: ViewerViewModel
 ) {
     var notes: String by rememberSaveable { mutableStateOf(item.notes) }
-    var cost: String by rememberSaveable { mutableStateOf(item.media.cost.toString()) }
-    var curVolumes: String by rememberSaveable { mutableStateOf(item.media.curVolumes.toString()) }
-    var maxVolumes: String by rememberSaveable { mutableStateOf(item.media.maxVolumes.toString()) }
+    var cost: String by rememberSaveable { mutableStateOf(item.cost.toString()) }
+    var saveEnabled: Boolean by rememberSaveable { mutableStateOf(true) }
+    var curVolumes: String by rememberSaveable { mutableStateOf(item.curVolumes.value) }
+    var maxVolumes: String by rememberSaveable { mutableStateOf(item.maxVolumes.value) }
 
     Column (
         modifier = Modifier
             .fillMaxSize()
-            .background(TsundokuBackgroundFade)
-            .padding(20.dp, 60.dp, 20.dp, 40.dp)
+            .background(Color(0xFF13171D))
+            .padding(20.dp, 20.dp, 20.dp, 10.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically
@@ -104,7 +103,6 @@ fun MediaEditScreen(
                 fontFamily = interFont
             )
         }
-        // TODO - Add clickable to go to AL series page to title
         Text(
             text = item.title,
             modifier = Modifier.height(IntrinsicSize.Min),
@@ -115,38 +113,16 @@ fun MediaEditScreen(
             overflow = TextOverflow.Ellipsis,
             fontFamily = interFont
         )
-        OutlinedTextField(
-            value = cost,
-            leadingIcon = { Text(currencySymbol, color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
-            onValueChange = { if (it.isEmpty() || (it.length <= 25 && MediaModel.costRegex.matches(it))) cost = it },
-            label = { Text("Cost") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(0.dp, 5.dp),
-            textStyle = TextStyle(
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = interFont
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedTextColor = Color(0xFF42B1EA),
-                unfocusedBorderColor = Color(0xFF42B1EA),
-                unfocusedContainerColor = Color(0xFF1F232D),
-                unfocusedLabelColor = Color(0xFF9EAEBD),
-                focusedTextColor = Color(0xFFC8C9E4),
-                focusedContainerColor = Color(0xFF1F232D),
-            ),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
         Row(
             modifier = Modifier.padding(0.dp, 5.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             OutlinedTextField(
-                value = curVolumes,
-                // TODO - Fix issue where it crashes if empty
-                onValueChange = { if (it.length <= 3 && maxVolumes.toInt() >= it.toInt()) curVolumes = it },
+                value = item.curVolumes.value,
+                onValueChange = {
+                    if (MediaModel.volumeNumRegex.matches(it)) item.curVolumes.value = it
+                    saveEnabled = !(it.isBlank() || item.maxVolumes.value.isBlank() || it.toInt() > item.maxVolumes.value.toInt())
+                },
                 label = { Text("Cur Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
                 modifier = Modifier
                     .height(60.dp)
@@ -168,10 +144,10 @@ fun MediaEditScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
             OutlinedTextField(
-                value = maxVolumes,
-                // TODO - Fix issue where it crashes if empty
+                value = item.maxVolumes.value,
                 onValueChange = {
-                    if (it.length <= 3 && curVolumes.toInt() <= it.toInt()) maxVolumes = it
+                    if (MediaModel.volumeNumRegex.matches(it)) item.maxVolumes.value = it
+                    saveEnabled = !(it.isBlank() || item.curVolumes.value.isBlank() || it.toInt() < item.curVolumes.value.toInt())
                 },
                 label = { Text("Max Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
                 modifier = Modifier
@@ -194,6 +170,30 @@ fun MediaEditScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
+        OutlinedTextField(
+            value = cost,
+            leadingIcon = { Text(viewerViewModel.getCurrencySymbol(), color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
+            onValueChange = { if (it.isEmpty() || (it.length <= 25 && MediaModel.costRegex.matches(it))) cost = it },
+            label = { Text("Cost") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(0.dp, 5.dp),
+            textStyle = TextStyle(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = interFont
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedTextColor = Color(0xFF42B1EA),
+                unfocusedBorderColor = Color(0xFF42B1EA),
+                unfocusedContainerColor = Color(0xFF1F232D),
+                unfocusedLabelColor = Color(0xFF9EAEBD),
+                focusedTextColor = Color(0xFFC8C9E4),
+                focusedContainerColor = Color(0xFF1F232D),
+            ),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
         OutlinedTextField(
             value = notes,
             onValueChange = { notes = it },
@@ -223,6 +223,7 @@ fun MediaEditScreen(
                 .padding(0.dp, 5.dp, 0.dp, 10.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
+            val context = LocalContext.current
             OutlinedButton(
                 colors = ButtonColors(
                     containerColor = Color(0xFF1F232D),
@@ -234,32 +235,47 @@ fun MediaEditScreen(
                     .border(2.dp, Color(0xFFC8C9E4), RoundedCornerShape(16.dp))
                     .height(35.dp)
                     .width(110.dp),
+                enabled = saveEnabled,
                 onClick = {
-                    val updateMap = mutableMapOf<String, Any?>("notes" to null, "curVolumes" to null, "maxVolumes" to null, "notes" to null)
-                    if(item.notes != notes) {
-                        item.notes = notes
-                        when(item.website) {
-                            Website.ANILIST -> viewerViewModel.updateAniListMediaNotes(item.media.mediaId, notes)
-                            Website.MANGADEX -> { updateMap["notes"] = notes }
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val updateMap = mutableMapOf<String, Any?>()
+                        if(item.notes != notes) {
+                            item.notes = notes
+                            when(item.website) {
+                                Website.ANILIST -> viewerViewModel.updateAniListMediaNotes(item.mediaId, notes)
+                                Website.MANGADEX -> { updateMap["notes"] = notes }
+                            }
                         }
-                    }
 
-                    if(item.media.curVolumes != curVolumes.toInt()) {
-                        item.media.curVolumes = curVolumes.toInt()
-                        updateMap["curVolumes"] = curVolumes
-                    }
-                    if(item.media.maxVolumes != maxVolumes.toInt()) {
-                        item.media.maxVolumes = maxVolumes.toInt()
-                        updateMap["maxVolumes"] = maxVolumes
-                    }
-                    if(item.media.cost != cost.toDouble()) {
-                        item.media.cost = cost.toDouble()
-                        updateMap["cost"] = cost
-                    }
+                        val maxVolumesInt = item.maxVolumes.value.toInt()
+                        val curVolumesInt = item.curVolumes.value.toInt()
+                        if(curVolumes.toInt() != curVolumesInt) {
+                            if (curVolumesInt <= maxVolumesInt) {
+                                Log.d("Supabase", "Updating Cur Volumes for ${item.title}")
+                                item.curVolumes.value = curVolumesInt.toString()
+                                updateMap["curVolumes"] = curVolumesInt
+                            } else {
+                                Toast.makeText(context, "Cur Volumes > Max Volumes", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        if(maxVolumes.toInt() != maxVolumesInt) {
+                            if (maxVolumesInt >= curVolumesInt) {
+                                Log.d("Supabase", "Updating Max Volumes for ${item.title}")
+                                item.maxVolumes.value = maxVolumesInt.toString()
+                                updateMap["maxVolumes"] = maxVolumesInt
+                            } else {
+                                Toast.makeText(context, "Max Volumes < Cur Volumes", Toast.LENGTH_SHORT).show()
+                            }
+                        }
 
-                    if (updateMap.isNotEmpty()) {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            viewerViewModel.updateDatabaseMedia(viewerViewModel.getViewerId(), item.media.mediaId, updateMap)
+                        if(item.cost != cost.toBigDecimal()) {
+                            Log.d("Supabase", "Updating Cost for ${item.title}")
+                            item.cost = cost.toBigDecimal()
+                            updateMap["cost"] = cost
+                        }
+
+                        if (updateMap.isNotEmpty()) {
+                            viewerViewModel.updateDatabaseMedia(viewerViewModel.getViewerId(), item.mediaId, updateMap)
                         }
                     }
                 },
@@ -275,14 +291,17 @@ fun MediaEditScreen(
                 colors = ButtonColors(
                     containerColor = Color(0xFF1F232D),
                     contentColor = Color(0xFFC8C9E4),
-                    disabledContainerColor = Color.Yellow,
-                    disabledContentColor = Color.Green,
+                    disabledContainerColor = Color(0xFFC8C9E4),
+                    disabledContentColor = Color(0xFF1F232D),
                 ),
                 modifier = Modifier
                     .border(2.dp, Color(0xFFC8C9E4), RoundedCornerShape(16.dp))
                     .height(35.dp)
                     .width(110.dp),
-                onClick = { userViewModel.setCurEditingMediaIndex(-1) },
+                onClick = {
+                    viewerViewModel.toggleTopAppBar()
+                    viewerViewModel.setSelectedItemIndex(-1)
+                },
             ) {
                 Text(
                     "Return",
@@ -466,6 +485,7 @@ fun MediaEditScreenPreview() {
                     .border(2.dp, Color(0xFFC8C9E4), RoundedCornerShape(16.dp))
                     .height(35.dp)
                     .width(110.dp),
+                enabled = false,
                 onClick = { /* if(entry.notes != notes) viewerViewModel.updateMediaNotes(entry.mediaId, notes)*/ },
             ) {
                 Text(
@@ -486,7 +506,7 @@ fun MediaEditScreenPreview() {
                     .border(2.dp, Color(0xFFC8C9E4), RoundedCornerShape(16.dp))
                     .height(35.dp)
                     .width(110.dp),
-                onClick = { /*userViewModel.setCurEditingMediaIndex(-1)*/ },
+                onClick = { /*viewerViewModel.setCurEditingMediaIndex(-1)*/ },
             ) {
                 Text(
                     "Return",

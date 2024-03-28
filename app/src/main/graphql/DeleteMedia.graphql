@@ -1,0 +1,6 @@
+mutation DeleteMediaFromTsundoku($mediaId: Int!, $customLists: [String]!) {
+    SaveMediaListEntry(mediaId: $mediaId, customLists: $customLists) {
+        id
+        customLists
+    }
+}

@@ -1,7 +1,6 @@
 package com.tsundoku.anilist
 
 import android.content.Context
-import android.util.Log
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.api.http.HttpRequest
 import com.apollographql.apollo3.api.http.HttpResponse
@@ -31,7 +30,6 @@ object AniListModule {
     fun provideAniListClient(@ApplicationContext context: Context): ApolloClient {
         // Cache is hit in order, so check in-memory -> check sqlite
         // We have an in-memory cache first for speed, then a SQLite cache for persistence.
-        Log.d("ANILIST", "CREATING CLIENT")
         return ApolloClient.Builder()
             .dispatcher(Dispatchers.IO)
             .serverUrl(ANILIST_GRAPHQL_BASE_URL)
@@ -47,13 +45,12 @@ object AniListModule {
         @ApplicationContext context: Context,
         authorizationInterceptor: HttpInterceptor
     ): ApolloClient {
-        Log.d("ANILIST", "CREATING AUTHORIZED CLIENT")
         val cacheFactory = MemoryCacheFactory(maxSizeBytes = 10 * 1024 * 1024).chain(SqlNormalizedCacheFactory(context, "apollo.db"))
         return ApolloClient.Builder()
             .dispatcher(Dispatchers.IO)
             .serverUrl(ANILIST_GRAPHQL_BASE_URL)
             .addHttpInterceptor(authorizationInterceptor)
-            .addHttpInterceptor(LoggingInterceptor(LoggingInterceptor.Level.BASIC))
+            .addHttpInterceptor(LoggingInterceptor(LoggingInterceptor.Level.BODY))
             .normalizedCache(cacheFactory)
             .build()
     }
@@ -70,7 +67,6 @@ object AniListModule {
             return chain.proceed(
                 request.newBuilder().apply {
                     preferencesRepository.accessToken.first()?.let {
-                        Log.d("ANILIST", "Adding Access Token")
                         addHeader("Authorization", "Bearer $it")
                     }
                 }.build()

@@ -40,7 +40,6 @@ fun Context.openActionView(uri: Uri) {
             startActivity(this)
         }
     } catch (e: ActivityNotFoundException) {
-        // showToast(getString(R.string.no_app_found_for_this_action))
         Log.e("ANILIST", "No App Found for this Action")
     }
 }

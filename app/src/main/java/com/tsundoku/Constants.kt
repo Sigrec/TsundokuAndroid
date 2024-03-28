@@ -14,13 +14,13 @@ const val TSUNDOKU_DEFAULT_CURRENCY_SYMBOL = "$"
 // AniList
 const val ANILIST_URL = "https://anilist.co"
 const val ANILIST_CLIENT_ID = 17514
-const val ANILIST_MANGA_URL = "$ANILIST_URL/manga/"
+const val ANILIST_MANGA_URL = "$ANILIST_URL/manga"
 const val ANILIST_AUTH_URL = "$ANILIST_URL/api/v2/oauth/authorize?client_id=$ANILIST_CLIENT_ID&response_type=token"
 const val ANILIST_GRAPHQL_BASE_URL = "https://graphql.anilist.co"
 
 // Mangadex
 const val MANGADEX_URL = "https://mangadex.org"
-const val MANGADEX_MANGA_URL = "$MANGADEX_URL/title/"
+const val MANGADEX_MANGA_URL = "$MANGADEX_URL/title"
 
 // Supabase DB
 const val DATABASE_VIEWER_TABLE = "viewer"

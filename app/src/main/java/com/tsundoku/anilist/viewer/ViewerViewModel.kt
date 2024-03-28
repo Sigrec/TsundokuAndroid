@@ -2,25 +2,30 @@ package com.tsundoku.anilist.viewer
 
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tsundoku.APP_NAME
 import com.tsundoku.GetCustomListsQuery
+import com.tsundoku.GetMediaCustomListsQuery
 import com.tsundoku.TSUNDOKU_SCHEME
+import com.tsundoku.anilist.enums.Lang
 import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
 import com.tsundoku.models.Media
-import com.tsundoku.models.TsundokuItem
 import com.tsundoku.models.ViewerState
+import com.tsundoku.models.VolumeUpdateMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -33,18 +38,44 @@ class ViewerViewModel @Inject constructor(
     private val preferencesRepo: PreferencesRepositoryImpl,
 ) : ViewModel() {
 
-    private val _viewerState = MutableStateFlow(ViewerState())
-    val viewerState : StateFlow<ViewerState> = _viewerState.asStateFlow()
+    private val _viewerState = mutableStateOf(ViewerState())
+    val viewerState: ViewerState = _viewerState.value
 
-    fun setViewerId(id: Int) { _viewerState.update { it.copy(viewerId = id) } }
-    fun getViewerId(): Int = viewerState.value.viewerId
+    // Items that had there volume count updated in the collection screen
+    private val _updatedCollectionItems: MutableStateFlow<MutableList<String>> = MutableStateFlow(mutableListOf())
+    val updatedCollectionItems = _updatedCollectionItems
+    fun addUpdatedCollectionItem(mediaId: String) {
+        if (!_updatedCollectionItems.value.parallelStream().anyMatch { it == mediaId }) {
+            _updatedCollectionItems.value.add(mediaId)
+        }
+    }
 
-    fun setCurrencyCode(code: String) { _viewerState.update { it.copy(currencyCode = code) } }
-    fun setCurrencySymbol(symbol: String) { _viewerState.update { it.copy(currencySymbol = symbol) } }
+    val isLoading: MutableState<Boolean> = mutableStateOf(false)
+    fun setIsLoading(new: Boolean) { isLoading.value = new }
 
+    val selectedItemIndex: MutableIntState = mutableIntStateOf(-1)
+    fun setSelectedItemIndex(index: Int) { selectedItemIndex.intValue = index }
 
-    fun setTsundokuCollection(newCollection: MutableList<TsundokuItem>) = _viewerState.update { it.copy(collection = newCollection) }
-    fun sortTsundokuCollection() { viewerState.value.collection?.sortBy { it.title } }
+    fun setViewerId(id: Int) { _viewerState.value.viewerId = id }
+    fun getViewerId(): Int = _viewerState.value.viewerId
+
+    fun setPreferredLang(lang: Lang) { _viewerState.value.preferredLang= lang }
+    fun getPreferredLang(): Lang = _viewerState.value.preferredLang
+
+    fun setCurrencyCode(code: String) { _viewerState.value.currencyCode = code }
+    fun getCurrencyCode(): String = _viewerState.value.currencyCode
+
+    fun setCurrencySymbol(symbol: String) { _viewerState.value.currencySymbol = symbol }
+    fun getCurrencySymbol(): String = _viewerState.value.currencySymbol
+
+    fun setSelectedPaneIndex(index: Int) { _viewerState.value.selectedPaneIndex = index }
+    fun getSelectedPaneIndex(): Int = _viewerState.value.selectedPaneIndex
+
+    val showTopAppBar: MutableState<Boolean> = mutableStateOf(true)
+    fun toggleTopAppBar() { showTopAppBar.value = showTopAppBar.value xor true }
+
+    val showBottomAppBar: MutableState<Boolean> = mutableStateOf(true)
+    fun toggleBottomAppBar() { showBottomAppBar.value = showBottomAppBar.value xor true }
 
     /**
      * Whether user opening the app has successfully oauth'd
@@ -60,8 +91,12 @@ class ViewerViewModel @Inject constructor(
     /**
      * Gets the logged in users custom list(s)
      */
-    fun getCustomLists(viewerId: Int): StateFlow<NetworkResource<GetCustomListsQuery.MediaList>> {
-        return viewerRepo.getCustomLists(viewerId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+    fun getViewerCustomLists(viewerId: Int): StateFlow<NetworkResource<GetCustomListsQuery.MediaList>> {
+        return viewerRepo.getViewerCustomLists(viewerId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+    }
+
+    fun getMediaCustomLists(mediaId: Int): StateFlow<NetworkResource<GetMediaCustomListsQuery.MediaList>> {
+        return viewerRepo.getMediaCustomLists(viewerState.viewerId, mediaId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
     }
 
     /**
@@ -86,7 +121,7 @@ class ViewerViewModel @Inject constructor(
      */
     fun onTokenDataReceived(data: Uri?) = viewModelScope.launch(Dispatchers.IO) {
         if (data?.scheme == TSUNDOKU_SCHEME && data.fragment?.startsWith("access_token") == true) {
-            Log.d("ANILIST", "Fetching User Token")
+            Log.d("AniList", "Fetching User Token")
             preferencesRepo.setAccessToken(data.fragment!!.substringAfter("access_token=").substringBefore("&token_type"))
         }
     }
@@ -109,24 +144,67 @@ class ViewerViewModel @Inject constructor(
         }
     }
 
-    suspend fun updateDatabaseMedia(viewerId: Int, mediaId: String, updateMap: Map<String, Any?>) {
-        viewerRepo.updateMedia(viewerId, mediaId, updateMap)
+    fun deleteAniListMediaFromCollection(mediaId: Int, customLists: MutableList<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            customLists.remove(APP_NAME)
+            viewerRepo.deleteAniListMediaFromCollection(mediaId = mediaId, customLists = customLists)
+                .collect {
+                    if (it.isSuccess) {
+                        Log.i("ANILIST", "Successfully Deleted Media $mediaId From Collection")
+                    } else {
+                        Log.e("ANILIST", "Deleting Media $mediaId From Collection Failed -> $it")
+                    }
+                }
+        }
     }
 
-    suspend fun getCurrencyCode(viewerId: Int): String? {
+    /**
+     * Updates a media entry in the database for the authenticated user
+     * @param viewerId The authenticated users AniList ID
+     * @param mediaId The unique ID for the entry
+     * @param updateMap Map containing the updates to make to the media
+     */
+    suspend fun updateDatabaseMedia(viewerId: Int, mediaId: String, updateMap: Map<String, Any?>) = viewerRepo.updateMedia(viewerId, mediaId, updateMap)
+
+    /**
+     * Updates a media entry in the database for the authenticated user
+     * @param updateList List of media and the new curVolume count to update to
+     */
+    suspend fun batchUpdateDatabaseMedia(updateList: MutableList<VolumeUpdateMedia>) = viewerRepo.batchCurVolumesUpdateMedia(_viewerState.value.viewerId, updateList)
+
+    /**
+     * Gets the currency currency code of the authenticated user
+     * @param viewerId The authenticated users AniList ID
+     */
+    suspend fun getDatabaseCurrencyCode(viewerId: Int): String? {
        return viewerRepo.getDatabaseViewerCurrencyCode(viewerId)?.currency
     }
 
+    /**
+     * Inserts a new user into the database
+     * @param viewerId The authenticated users AniList ID
+     */
     suspend fun insertDatabaseViewer(viewerId: Int) {
         viewerRepo.insertDatabaseViewer(viewerId)
     }
 
-    // REMEMBER TO GET THE CURRENT ANILIST STATUS?
-    suspend fun insertNewMedia(mediaList: List<Media>) {
+    /**
+     * Insert a list of new media entries for a user into the database
+     * @param mediaList The list of media to add for the user
+     */
+    suspend fun insertNewDatabaseMedia(mediaList: List<Media>) {
         viewerRepo.insertNewMedia(mediaList)
     }
 
+    /**
+     * Gets the list of media for a users collection
+     * @param viewerId The authenticated users AniList ID
+     */
     suspend fun getDatabaseMediaList(viewerId: Int): List<Media> {
         return viewerRepo.getMediaList(viewerId)
+    }
+
+    suspend fun deleteDatabaseMedia(deleteList: List<String>) {
+        viewerRepo.deleteMedia(_viewerState.value.viewerId, deleteList)
     }
 }
