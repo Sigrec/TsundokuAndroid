@@ -2,6 +2,7 @@ package com.tsundoku.ui.collection
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.ramcosta.composedestinations.annotation.Destination
+import com.tsundoku.APP_NAME
 import com.tsundoku.GetTsundokuCollectionQuery
+import com.tsundoku.TSUNDOKU_COLLECTION_CARD_GAP
 import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.NetworkResource
@@ -45,26 +48,33 @@ fun CollectionScreen(
     }
     val collectionUiState by collectionViewModel.collectionUiState.collectAsState()
     val tsundokuCollection by collectionViewModel.tsundokuCollection.collectAsState()
+    val searchingState by collectionViewModel.searchingState
+    val filteringState by collectionViewModel.filteringState
 
     Surface (
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF13171D),
     ) {
-        LazyColumn(
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 10.dp),
+        // Set state functionality for filtering
+        Column(
+            modifier = Modifier.padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(15.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            if (collectionUiState.onViewer) {
-                Log.d("Collection Screen", "Showing Viewer Collection")
-                itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
-                    SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, index = index, viewerViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
+            ) {
+                if (collectionUiState.onViewer) {
+                    Log.d(APP_NAME, "Showing Viewer Collection")
+                    itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
+                        SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, index = index, viewerViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
+                    }
                 }
-            }
-            else {
-                Log.d("Collection Screen", "Showing Another Users Collection")
-                itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
-                    MediaCard(item = item, index = index, viewerViewModel, collectionUiState, LocalUriHandler.current)
+                else {
+                    Log.d(APP_NAME, "Showing Another Users Collection")
+                    itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
+                        MediaCard(item = item, index = index, viewerViewModel, collectionUiState, LocalUriHandler.current)
+                    }
                 }
             }
         }
@@ -180,16 +190,17 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                     collection.add(
                         TsundokuItem(
                             mediaId = entry.mediaListEntry.mediaId.toString(),
-                            Website.ANILIST,
-                            media!!.title!!.userPreferred!!,
-                            media.countryOfOrigin.toString(),
-                            MediaModel.getCorrectFormat(
+                            website = Website.ANILIST,
+                            title = media!!.title!!.userPreferred!!,
+                            countryOfOrigin = media.countryOfOrigin.toString(),
+                            status = MediaModel.getMediaStatus(media.status!!.name),
+                            format = MediaModel.getCorrectFormat(
                                 media.format!!.name,
                                 media.countryOfOrigin.toString()
                             ),
-                            media.chapters ?: 0,
-                            entry.mediaListEntry.notes ?: "",
-                            media.coverImage!!.medium!!,
+                            chapters = media.chapters ?: 0,
+                            notes = entry.mediaListEntry.notes ?: "",
+                            imageUrl = media.coverImage!!.medium!!,
                             curVolumes = mutableStateOf(dbMedia.curVolumes.toString()),
                             maxVolumes = mutableStateOf(dbMedia.maxVolumes.toString()),
                             cost = dbMedia.cost
@@ -202,9 +213,8 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 // collectionViewModel.sortTsundokuCollection() enable if adding MangaDex
                 if (collectionViewModel.isRefreshing.value) collectionViewModel.setIsRefreshing(false)
                 if (viewerViewModel.isLoading.value) {
-                    Log.d("TEST", "TOGGLING OFF LOADING SCREEN")
-//                    viewerViewModel.toggleTopAppBar()
-//                    viewerViewModel.toggleBottomAppBar()
+                    viewerViewModel.toggleTopAppBar()
+                    viewerViewModel.toggleBottomAppBar()
                     viewerViewModel.setIsLoading(false)
                 }
             }

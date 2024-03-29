@@ -4,12 +4,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.unit.dp
 
 // Tsundoku App
 const val APP_NAME = "Tsundoku"
 const val TSUNDOKU_SCHEME = "tsundoku"
 const val TSUNDOKU_DEFAULT_CURRENCY_CODE = "USD"
 const val TSUNDOKU_DEFAULT_CURRENCY_SYMBOL = "$"
+val TSUNDOKU_COLLECTION_CARD_GAP = 15.dp
 
 // AniList
 const val ANILIST_URL = "https://anilist.co"

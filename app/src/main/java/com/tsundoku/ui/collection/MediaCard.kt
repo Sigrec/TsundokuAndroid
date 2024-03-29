@@ -203,7 +203,7 @@ fun MediaCard(
                     .weight(1f)
             ) {
                 Text(
-                    text = item.format,
+                    text = "${item.format} | ${item.status}",
                     textAlign = TextAlign.Start,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -215,7 +215,7 @@ fun MediaCard(
                     modifier = Modifier
                         //.offset(y = (-4).dp)
                         .clickable { if (viewerViewModel.selectedItemIndex.intValue == -1) {
-                            viewerViewModel.toggleTopAppBar()
+                            if (viewerViewModel.showTopAppBar.value) viewerViewModel.toggleTopAppBar()
                             viewerViewModel.setSelectedItemIndex(index)
                         }                                                              },
                     textAlign = TextAlign.Start,

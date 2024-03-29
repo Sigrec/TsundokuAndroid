@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.rememberNavController
@@ -30,7 +31,6 @@ import com.tsundoku.ui.collection.CollectionTopAppBar
 import com.tsundoku.ui.loading.LoadingScreen
 import com.tsundoku.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.runBlocking
 
 @AndroidEntryPoint
@@ -38,12 +38,11 @@ class Launch : ComponentActivity() {
     private val viewerViewModel: ViewerViewModel by viewModels()
     private val collectionViewModel: CollectionViewModel by viewModels()
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // TODO - Apply MaterialTheme and use Generator for colors
+        // TODO - Apply MaterialTheme and use Generator for colors???
         setContent {
             AppTheme (
                 darkTheme = true
@@ -63,6 +62,10 @@ class Launch : ComponentActivity() {
                     bottomBar = { if (viewerViewModel.showBottomAppBar.value) BottomNavigationBar(navController) },
                     topBar = { if (viewerViewModel.showTopAppBar.value) CollectionTopAppBar(viewerViewModel, collectionViewModel) },
                 ) {
+                    LaunchedEffect(Unit) {
+                        viewerViewModel.toggleTopAppBar()
+                        viewerViewModel.toggleBottomAppBar()
+                    }
                     DestinationsNavHost(
                         navGraph = NavGraphs.root,
                         modifier = androidx.compose.ui.Modifier.padding(it),
@@ -84,7 +87,6 @@ class Launch : ComponentActivity() {
 }
 
 // TODO - Disable rotation
-// TODO - Change color of bar where camera is
 // TODO - Issue where login screen is showing when it shouldn't on initial launch
 @Destination("launch")
 @RootNavGraph(start = true)
@@ -104,11 +106,7 @@ fun LaunchPane(
     Log.d("Tsundoku", "User ${if(isLoggedIn) "is" else "is not"} logged in")
     viewerViewModel.setIsLoading(true)
     if(isLoggedIn) {
-        if (viewerViewModel.isLoading.value) {
-//                viewerViewModel.toggleTopAppBar()
-//                viewerViewModel.toggleBottomAppBar()
-            LoadingScreen()
-        }
+        if (viewerViewModel.isLoading.value) LoadingScreen()
         val viewer by viewerViewModel.aniListViewer.collectAsState()
         if (viewer.data != null) {
             Log.d("ANILIST","${viewer.data!!.name} | ${viewer.data!!.id} | ${viewer.data!!.avatar!!.medium} | ${viewer.data!!.bannerImage} | https://anilist.co/user/${viewer.data!!.id}"

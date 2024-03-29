@@ -92,9 +92,9 @@ fun MediaEditScreen(
             )
             // TODO - Need to add a little padding top align vertically
             Text(
-                text = item.format,
+                text = "${item.format} | ${item.status}",
                 modifier = Modifier
-                    .width(IntrinsicSize.Min)
+                    .width(IntrinsicSize.Max)
                     .padding(5.dp, 5.dp, 0.dp, 0.dp),
                 textAlign = TextAlign.Start,
                 fontWeight = FontWeight.Bold,
@@ -103,6 +103,7 @@ fun MediaEditScreen(
                 fontFamily = interFont
             )
         }
+        // TODO - Fix padding issue, needs to be centered
         Text(
             text = item.title,
             modifier = Modifier.height(IntrinsicSize.Min),

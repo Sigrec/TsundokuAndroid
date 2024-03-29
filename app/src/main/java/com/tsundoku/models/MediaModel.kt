@@ -32,6 +32,17 @@ class MediaModel {
             } else "Novel"
         }
 
+        fun getMediaStatus(status: String): String {
+            return when (status) {
+                "FINISHED" -> "Finished"
+                "RELEASING" -> "Ongoing"
+                "NOT_YET_RELEASED" -> "Coming Soon"
+                "CANCELLED" -> "Cancelled"
+                "HIATUS" -> "Hiatus"
+                else -> "Error"
+            }
+        }
+
         /**
          * Get the currency symbol based on its currency code
          * @param currencyCode THe code to used to get the symbol

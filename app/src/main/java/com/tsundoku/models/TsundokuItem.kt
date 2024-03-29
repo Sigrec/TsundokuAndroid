@@ -8,6 +8,7 @@ data class TsundokuItem(
     val website: Website,
     val title: String,
     val countryOfOrigin: String,
+    val status: String,
     val format: String,
     val chapters: Int,
     var notes: String,
