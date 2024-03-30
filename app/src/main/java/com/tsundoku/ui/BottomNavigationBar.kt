@@ -18,11 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.navigation.NavController
+import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.BottomNavigationItem
 import com.tsundoku.ui.theme.TsundokuBackground
 
 @Composable
 fun BottomNavigationBar(
+    viewerViewModel: ViewerViewModel,
     navController: NavController
 ) {
     var selectedPaneIndex by rememberSaveable { mutableIntStateOf(0) }

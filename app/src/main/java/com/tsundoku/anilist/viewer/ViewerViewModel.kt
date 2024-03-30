@@ -16,7 +16,9 @@ import com.tsundoku.anilist.enums.Lang
 import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
+import com.tsundoku.data.TsundokuFormat
 import com.tsundoku.models.Media
+import com.tsundoku.models.ViewerModel
 import com.tsundoku.models.ViewerState
 import com.tsundoku.models.VolumeUpdateMedia
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,14 +70,26 @@ class ViewerViewModel @Inject constructor(
     fun setCurrencySymbol(symbol: String) { _viewerState.value.currencySymbol = symbol }
     fun getCurrencySymbol(): String = _viewerState.value.currencySymbol
 
-    fun setSelectedPaneIndex(index: Int) { _viewerState.value.selectedPaneIndex = index }
-    fun getSelectedPaneIndex(): Int = _viewerState.value.selectedPaneIndex
+//    fun setSelectedPaneIndex(index: Int) { _viewerState.value.selectedPaneIndex = index }
+//    fun getSelectedPaneIndex(): Int = _viewerState.value.selectedPaneIndex
 
     val showTopAppBar: MutableState<Boolean> = mutableStateOf(true)
-    fun toggleTopAppBar() { showTopAppBar.value = showTopAppBar.value xor true }
+    fun turnOffTopAppBar() { showTopAppBar.value = false }
+    fun turnOnTopAppBar() { showTopAppBar.value = true }
 
     val showBottomAppBar: MutableState<Boolean> = mutableStateOf(true)
-    fun toggleBottomAppBar() { showBottomAppBar.value = showBottomAppBar.value xor true }
+    private fun turnOffBottomAppBar() { showBottomAppBar.value = false }
+    private fun turnOnBottomAppBar() { showBottomAppBar.value = true }
+
+    fun turnOffAppBar(){
+        if (showTopAppBar.value) turnOffTopAppBar()
+        if (showBottomAppBar.value) turnOffBottomAppBar()
+    }
+
+    fun turnOnAppBar(){
+        if (!showTopAppBar.value) turnOnTopAppBar()
+        if (!showBottomAppBar.value) turnOnBottomAppBar()
+    }
 
     /**
      * Whether user opening the app has successfully oauth'd
@@ -87,6 +101,7 @@ class ViewerViewModel @Inject constructor(
      */
     val aniListViewer = viewerRepo.getAniListViewer().asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
 
+    fun getNewAniListMediaSeries(seriesId: Int?, title: String?, format: TsundokuFormat) = viewerRepo.getNewAniListMediaSeries(seriesId, title, format).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
 
     /**
      * Gets the logged in users custom list(s)
@@ -95,6 +110,9 @@ class ViewerViewModel @Inject constructor(
         return viewerRepo.getViewerCustomLists(viewerId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
     }
 
+    /**
+     * Gets the authenticated users custom lists for a specific media
+     */
     fun getMediaCustomLists(mediaId: Int): StateFlow<NetworkResource<GetMediaCustomListsQuery.MediaList>> {
         return viewerRepo.getMediaCustomLists(viewerState.viewerId, mediaId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
     }
@@ -144,6 +162,32 @@ class ViewerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Adds a AniList media to "Tsundoku" custom list in AniList
+     * @param mediaId The unique AniList media ID for the series
+     */
+    fun addAniListMediaToCollection(mediaId: Int, customLists: MutableList<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            customLists.add(APP_NAME)
+            Log.d("TEST", "CUSTOM LISTS 1 = ${ViewerModel.parseTrueCustomLists(StringBuilder(customLists.toString().trim()))}")
+            viewerRepo.addAniListMediaToCollection(mediaId = mediaId, customLists = customLists)
+            .collect {
+                if(it.isSuccess) {
+                    Log.i(APP_NAME, "Successfully Added Media $mediaId To Collection")
+                } else if (it.isFailure) {
+                    Log.e(APP_NAME, "Adding Media $mediaId To Collection Failed")
+                } else {
+                    Log.e(APP_NAME, "Adding Media $mediaId Unknown Issues/Error")
+                }
+            }
+        }
+    }
+
+    /**
+     * Deletes a AniList media series from the authenticated users "Tsundoku" custom list in AniList
+     * @param mediaId The unique AniList media ID for the series
+     * @param customLists The users current list of custom lists to not override others
+     */
     fun deleteAniListMediaFromCollection(mediaId: Int, customLists: MutableList<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             customLists.remove(APP_NAME)

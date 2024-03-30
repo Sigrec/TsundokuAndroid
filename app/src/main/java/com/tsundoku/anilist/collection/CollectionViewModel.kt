@@ -9,6 +9,8 @@ import com.tsundoku.GetTsundokuCollectionQuery
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
 import com.tsundoku.data.TsundokuFilter
+import com.tsundoku.data.TsundokuFormat
+import com.tsundoku.data.TsundokuStatus
 import com.tsundoku.models.CollectionUiState
 import com.tsundoku.models.TsundokuItem
 import com.tsundoku.type.MediaListSort
@@ -66,35 +68,18 @@ class CollectionViewModel @Inject constructor(
 
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()
-    @OptIn(FlowPreview::class)
     fun updateSearchText(curText: String) {
         _searchText.value = curText
-        tsundokuCollection = searchText
-            .debounce(500L)
-            .combine(_tsundokuCollection) { text, collection ->
-                if (text.isBlank()) {
-                    collection
-                } else {
-                    collection.filter {
-                        it.title.contains(text, ignoreCase = true)
-                    }
-                }
-            }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(1000),
-                _tsundokuCollection.value
-            )
     }
     private val _searchingState: MutableState<Boolean> = mutableStateOf(false)
     val searchingState: State<Boolean> = _searchingState
     fun toggleSearchingState() { _searchingState.value = _searchingState.value xor true }
 
 
-    private val _filter = MutableStateFlow("None")
+    private val _filter = MutableStateFlow(TsundokuFilter.NONE)
     val filter = _filter.asStateFlow()
-    fun updateFilter(newFilter: String) {
-        _filter.value = newFilter
+    fun updateFilter(tsundokuFilter: TsundokuFilter) {
+        _filter.value = tsundokuFilter
     }
     private val _filteringState: MutableState<Boolean> = mutableStateOf(false)
     val filteringState: State<Boolean> = _filteringState
@@ -102,23 +87,23 @@ class CollectionViewModel @Inject constructor(
 
     private val _tsundokuCollection: MutableStateFlow<MutableList<TsundokuItem>> = MutableStateFlow(mutableListOf())
     @OptIn(FlowPreview::class)
-    var tsundokuCollection: StateFlow<List<TsundokuItem>> = combine(searchText.debounce { if (it.isNotBlank()) 1000L else 500L }, filter.debounce(500L), _tsundokuCollection)
+    var tsundokuCollection: StateFlow<List<TsundokuItem>> = combine(searchText.debounce { if (it.isNotBlank()) 1000L else 500L }, filter.debounce(100L), _tsundokuCollection)
     { text, curFilter, collection ->
              if (text.isNotBlank()) {
                 collection.filter {
                     it.title.contains(text, ignoreCase = true)
                 }
             }
-            else if (curFilter != "None") {
+            else if (curFilter != TsundokuFilter.NONE) {
                 collection.filter {
-                    when (TsundokuFilter.getFilterValue(curFilter)) {
-                        TsundokuFilter.MANGA -> it.format == "Manga" || it.format == "Manhwa" || it.format == "Manhua" || it.format == "Manfra" || it.format == "Comic"
-                        TsundokuFilter.NOVEL -> it.format == "Novel"
-                        TsundokuFilter.ONGOING -> it.status == "Ongoing"
-                        TsundokuFilter.FINISHED -> it.status == "Finished"
-                        TsundokuFilter.COMING_SOON -> it.status == "Coming Soon"
-                        TsundokuFilter.CANCELLED -> it.status == "Cancelled"
-                        TsundokuFilter.HIATUS -> it.status == "Hiatus"
+                    when (curFilter) {
+                        TsundokuFilter.MANGA -> it.format == TsundokuFormat.MANGA || it.format == TsundokuFormat.MANHWA || it.format == TsundokuFormat.MANHUA || it.format == TsundokuFormat.COMIC || it.format == TsundokuFormat.MANFRA
+                        TsundokuFilter.NOVEL -> it.format == TsundokuFormat.NOVEL
+                        TsundokuFilter.ONGOING -> it.status == TsundokuStatus.ONGOING
+                        TsundokuFilter.FINISHED -> it.status == TsundokuStatus.FINISHED
+                        TsundokuFilter.COMING_SOON -> it.status == TsundokuStatus.COMING_SOON
+                        TsundokuFilter.CANCELLED -> it.status == TsundokuStatus.CANCELLED
+                        TsundokuFilter.HIATUS -> it.status == TsundokuStatus.HIATUS
                         TsundokuFilter.COMPLETE -> it.curVolumes.value.toInt() == it.maxVolumes.value.toInt()
                         TsundokuFilter.INCOMPLETE -> it.curVolumes.value.toInt() != it.maxVolumes.value.toInt()
                         else -> true
@@ -153,12 +138,13 @@ class CollectionViewModel @Inject constructor(
     }
 
     fun deleteItemFromTsundokuCollection(item: TsundokuItem) {
-        _tsundokuCollection.value.forEachIndexed { index, it ->
+        val list = _tsundokuCollection.value.toMutableList()
+        list.forEachIndexed { index, it ->
             if (it.mediaId == item.mediaId) {
-                _tsundokuCollection.value.removeAt(index)
+                list.removeAt(index)
             }
         }
-        //_tsundokuCollection.update { _tsundokuCollection.value }
+        _tsundokuCollection.update { list }
     }
     fun sortTsundokuCollection() { _tsundokuCollection.value.sortBy { it.title } }
 }

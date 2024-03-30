@@ -229,8 +229,8 @@ fun MediaEditScreen(
                 colors = ButtonColors(
                     containerColor = Color(0xFF1F232D),
                     contentColor = Color(0xFFC8C9E4),
-                    disabledContainerColor = Color.Red,
-                    disabledContentColor = Color.Red
+                    disabledContainerColor = Color(0xFFC8C9E4),
+                    disabledContentColor = Color(0xFF1F232D),
                 ),
                 modifier = Modifier
                     .border(2.dp, Color(0xFFC8C9E4), RoundedCornerShape(16.dp))
@@ -300,7 +300,7 @@ fun MediaEditScreen(
                     .height(35.dp)
                     .width(110.dp),
                 onClick = {
-                    viewerViewModel.toggleTopAppBar()
+                    viewerViewModel.turnOnTopAppBar()
                     viewerViewModel.setSelectedItemIndex(-1)
                 },
             ) {

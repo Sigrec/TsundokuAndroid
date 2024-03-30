@@ -6,19 +6,23 @@ import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.cache.normalized.FetchPolicy
 import com.apollographql.apollo3.cache.normalized.fetchPolicy
 import com.tsundoku.APP_NAME
+import com.tsundoku.AddMediaToTsundokuMutation
 import com.tsundoku.AddTsundokuListMutation
 import com.tsundoku.DATABASE_MEDIA_TABLE
 import com.tsundoku.DATABASE_VIEWER_TABLE
 import com.tsundoku.DeleteMediaFromTsundokuMutation
 import com.tsundoku.GetCustomListsQuery
 import com.tsundoku.GetMediaCustomListsQuery
+import com.tsundoku.GetMediaEntryQuery
 import com.tsundoku.UpdateMediaNotesMutation
 import com.tsundoku.ViewerQuery
 import com.tsundoku.anilist.AuthorizedClient
+import com.tsundoku.data.TsundokuFormat
 import com.tsundoku.extensions.asResult
 import com.tsundoku.models.Media
 import com.tsundoku.models.Viewer
 import com.tsundoku.models.VolumeUpdateMedia
+import com.tsundoku.type.MediaFormat
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -74,6 +78,12 @@ class ViewerRepositoryImpl @Inject constructor(
             .asResult { it.UpdateUser!! }
     }
 
+    override fun getNewAniListMediaSeries(seriesId: Int?, title: String?, format: TsundokuFormat) = authAniListClient
+        .query(GetMediaEntryQuery(seriesId = Optional.presentIfNotNull(seriesId), type = if (format == TsundokuFormat.NOVEL) MediaFormat.NOVEL else MediaFormat.MANGA, title = Optional.presentIfNotNull(title)))
+        .fetchPolicy(FetchPolicy.CacheAndNetwork)
+        .toFlow()
+        .asResult { it.Media!! }
+
     /**
      * Updates the viewers notes for a specific series
      * @param mediaId The unique id of the media to update
@@ -81,16 +91,36 @@ class ViewerRepositoryImpl @Inject constructor(
      */
     override fun updateAniListMediaNotes(mediaId: Int, newNote: String) = authAniListClient
         .mutation(UpdateMediaNotesMutation(mediaId = Optional.presentIfNotNull(mediaId), notes = Optional.present(newNote)))
-        .fetchPolicy(FetchPolicy.CacheAndNetwork)
+        .fetchPolicy(FetchPolicy.NetworkOnly)
         .toFlow()
         .asResult { it.SaveMediaListEntry!! }
 
+    /**
+     * Adds a AniList media to "Tsundoku" custom list in AniList
+     * @param mediaId The unique AniList media ID for the series
+     */
+    override fun addAniListMediaToCollection(mediaId: Int, customLists: List<String>): Flow<Result<AddMediaToTsundokuMutation.SaveMediaListEntry>> {
+        return authAniListClient
+            .mutation(AddMediaToTsundokuMutation(mediaId = mediaId, customLists = customLists))
+            .fetchPolicy(FetchPolicy.NetworkOnly)
+            .toFlow()
+            .asResult { it.SaveMediaListEntry!! }
+    }
+
+    /**
+     * Deletes a AniList media series from the authenticated users "Tsundoku" custom list in AniList
+     * @param mediaId The unique AniList media ID for the series
+     * @param customLists The users current list of custom lists to not override others
+     */
     override fun deleteAniListMediaFromCollection(mediaId: Int, customLists: List<String>) = authAniListClient
         .mutation(DeleteMediaFromTsundokuMutation(mediaId = mediaId, customLists = customLists))
-        .fetchPolicy(FetchPolicy.CacheAndNetwork)
+        .fetchPolicy(FetchPolicy.NetworkOnly)
         .toFlow()
         .asResult { it.SaveMediaListEntry!! }
 
+    /**
+     *
+     */
     override suspend fun getDatabaseViewerCurrencyCode(viewerId: Int): Viewer? {
         return supabase.from(DATABASE_VIEWER_TABLE).select(columns = Columns.list("currency")) {
             filter {

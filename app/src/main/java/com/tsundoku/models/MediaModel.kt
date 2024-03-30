@@ -1,6 +1,11 @@
 package com.tsundoku.models
 
 import android.icu.util.Currency
+import androidx.compose.runtime.mutableStateOf
+import com.tsundoku.GetMediaEntryQuery
+import com.tsundoku.data.TsundokuFormat
+import com.tsundoku.data.TsundokuStatus
+import com.tsundoku.fragment.MediaListEntry
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -19,27 +24,77 @@ class MediaModel {
     companion object {
         val costRegex = Regex("^\\d+[.]?(?:[\\d]{1,2})?\$")
         val volumeNumRegex = Regex("^\\d{0,3}")
+        val validateUUIDRegex = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\$")
 
-        fun getCorrectFormat(format: String, countryOfOrigin: String): String {
-            return if (format == "MANGA") {
-                when (countryOfOrigin) {
-                    "KR", "ko" -> "Manhwa"
-                    "CN", "TW", "zh", "zh-hk" -> "Manhua"
-                    "FR", "fr" -> "Manfra"
-                    "EN", "en" -> "Comic"
-                    else -> "Manga"
-                }
-            } else "Novel"
+        fun parseAniListMedia(media: MediaListEntry.Media, dbMedia: Media): TsundokuItem {
+            return TsundokuItem(
+                mediaId = media.id.toString(),
+                website = Website.ANILIST,
+                title = media.title!!.userPreferred!!,
+                countryOfOrigin = media.countryOfOrigin.toString(),
+                status = getMediaStatus(media.status!!.name),
+                format = getCorrectFormat(
+                    media.format!!.name,
+                    media.countryOfOrigin.toString()
+                ),
+                chapters = media.chapters ?: 0,
+                notes = media.mediaListEntry?.notes ?: "",
+                imageUrl = media.coverImage!!.medium!!,
+                curVolumes = mutableStateOf(dbMedia.curVolumes.toString()),
+                maxVolumes = mutableStateOf(dbMedia.maxVolumes.toString()),
+                cost = dbMedia.cost
+            )
         }
 
-        fun getMediaStatus(status: String): String {
+        fun parseAniListMedia(media: GetMediaEntryQuery.Media, curVolumes: Int, maxVolumes: Int, cost: BigDecimal): TsundokuItem {
+            return TsundokuItem(
+                mediaId = media.id.toString(),
+                website = Website.ANILIST,
+                title = media.title!!.userPreferred!!,
+                countryOfOrigin = media.countryOfOrigin.toString(),
+                status = getMediaStatus(media.status!!.name),
+                format = getCorrectFormat(
+                    media.format!!.name,
+                    media.countryOfOrigin.toString()
+                ),
+                chapters = media.chapters ?: 0,
+                notes = if(media.mediaListEntry != null) media.mediaListEntry.notes ?: "" else "",
+                imageUrl = media.coverImage!!.medium!!,
+                curVolumes = mutableStateOf(curVolumes.toString()),
+                maxVolumes = mutableStateOf(maxVolumes.toString()),
+                cost = cost
+            )
+        }
+
+        /**
+         * Gets the correct format for a series
+         * @param format The input format form AniList or Mangadex to be parsed
+         * @param countryOfOrigin The country where this series was made
+         */
+        fun getCorrectFormat(format: String, countryOfOrigin: String): TsundokuFormat {
+            return if (format == "MANGA") {
+                when (countryOfOrigin) {
+                    "JP", "jp" -> TsundokuFormat.MANGA
+                    "KR", "ko" -> TsundokuFormat.MANHWA
+                    "CN", "TW", "zh", "zh-hk" -> TsundokuFormat.MANHUA
+                    "FR", "fr" -> TsundokuFormat.MANFRA
+                    "EN", "en" -> TsundokuFormat.COMIC
+                    else -> TsundokuFormat.ERROR
+                }
+            } else TsundokuFormat.NOVEL
+        }
+
+        /**
+         * Gets the status of a series converted into
+         */
+        fun getMediaStatus(status: String): TsundokuStatus {
             return when (status) {
-                "FINISHED" -> "Finished"
-                "RELEASING" -> "Ongoing"
-                "NOT_YET_RELEASED" -> "Coming Soon"
-                "CANCELLED" -> "Cancelled"
-                "HIATUS" -> "Hiatus"
-                else -> "Error"
+                "FINISHED" -> TsundokuStatus.FINISHED
+                "RELEASING" -> TsundokuStatus.ONGOING
+                "NOT_YET_RELEASED" -> TsundokuStatus.COMING_SOON
+                "CANCELLED" -> TsundokuStatus.CANCELLED
+                "HIATUS" -> TsundokuStatus.HIATUS
+                else -> TsundokuStatus.ERROR
             }
         }
 

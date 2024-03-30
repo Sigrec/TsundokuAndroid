@@ -216,7 +216,7 @@ fun FilterCollectionWidget(
                     selectedIndex = selectedIndex,
                     onItemSelected = { index, curFilter ->
                         selectedIndex = index
-                        collectionViewModel.updateFilter(curFilter)
+                        collectionViewModel.updateFilter(TsundokuFilter.parse(curFilter))
                     },
                 )
             }
@@ -260,7 +260,7 @@ fun <T> LargeDropdownMenu(
             },
             trailingIcon = {
                 IconButton(onClick = {
-                    if (collectionViewModel.filter.value != "None") collectionViewModel.updateFilter("None")
+                    if (collectionViewModel.filter.value != TsundokuFilter.NONE) collectionViewModel.updateFilter(TsundokuFilter.NONE)
                     collectionViewModel.toggleFilteringState()
                 }) {
                     Icon(

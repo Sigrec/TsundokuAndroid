@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,7 +29,6 @@ import com.tsundoku.models.Media
 import com.tsundoku.models.MediaModel
 import com.tsundoku.models.TsundokuItem
 import com.tsundoku.models.ViewerModel
-import com.tsundoku.models.Website
 import com.tsundoku.ui.loading.LoadingIndicator
 import com.tsundoku.ui.loading.LoadingScreen
 import java.math.BigDecimal
@@ -39,13 +37,18 @@ import java.math.BigDecimal
 @Composable
 fun CollectionScreen(
     viewerViewModel: ViewerViewModel,
-    collectionViewModel: CollectionViewModel,
+    collectionViewModel: CollectionViewModel
 ) {
-    // TODO - Currently going back and forth between profile and collection causes it to load the collection again, not a big issue right now
-    LaunchedEffect(Unit) {
-        instantiateDatabaseUser(viewerViewModel)
-        fetchTsundokuCollection(viewerViewModel, collectionViewModel)
+    if (viewerViewModel.isLoading.value) {
+        LaunchedEffect(Unit) {
+            Log.d("TEST", "Loading Collection")
+            instantiateDatabaseUser(viewerViewModel)
+            fetchTsundokuCollection(viewerViewModel, collectionViewModel)
+        }
     }
+
+    if (!viewerViewModel.showTopAppBar.value) viewerViewModel.turnOnTopAppBar()
+
     val collectionUiState by collectionViewModel.collectionUiState.collectAsState()
     val tsundokuCollection by collectionViewModel.tsundokuCollection.collectAsState()
     val searchingState by collectionViewModel.searchingState
@@ -57,10 +60,12 @@ fun CollectionScreen(
     ) {
         // Set state functionality for filtering
         Column(
-            modifier = Modifier.padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
+            modifier = Modifier
+                .padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
+            // TODO - Srcollstate not saved when filtering then coming back
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
             ) {
@@ -105,7 +110,7 @@ suspend fun updateDatabaseMediaList(viewerId: Int, tsundokuCollection: List<GetT
             insertList.add(
                 Media(
                     viewerId,
-                    it!!.mediaListEntry.mediaId.toString(),
+                    it!!.mediaListEntry.media!!.id.toString(),
                     0,
                     it.mediaListEntry.media!!.volumes ?: 1,
                     BigDecimal(0.00)
@@ -115,14 +120,15 @@ suspend fun updateDatabaseMediaList(viewerId: Int, tsundokuCollection: List<GetT
     } else {
         // Check to see if a specific media in the Tsundoku Collection exists in the DB if not add it to be batched
         tsundokuCollection.forEach {
-            val mediaId = it!!.mediaListEntry.mediaId.toString()
+            val curMedia = it!!.mediaListEntry.media!!
+            val mediaId = curMedia.id.toString()
             if (!curDbMediaList.parallelStream().anyMatch { media -> media.mediaId == mediaId }) {
                 insertList.add(
                     Media(
                         viewerId,
                         mediaId,
                         0,
-                        it.mediaListEntry.media!!.volumes ?: 1,
+                        curMedia.volumes ?: 1,
                         BigDecimal(0.00)
                     )
                 )
@@ -131,7 +137,7 @@ suspend fun updateDatabaseMediaList(viewerId: Int, tsundokuCollection: List<GetT
 
         // Check to see if a media entry exists in the DB for a series that is no longer in the users collection if so add it to delete batch list
         curDbMediaList.forEach {
-            if (!tsundokuCollection.parallelStream().anyMatch { media -> media!!.mediaListEntry.mediaId.toString() == it.mediaId }) {
+            if (!tsundokuCollection.parallelStream().anyMatch { media -> media!!.mediaListEntry.media!!.id.toString() == it.mediaId }) {
                 deleteList.add(it.mediaId)
             }
         }
@@ -182,30 +188,10 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
 
                 // Add AniList Entries
                 aniListEntries.forEach { entry ->
-                    val media = entry!!.mediaListEntry.media
                     val dbMedia = viewerDatabaseMediaList.parallelStream().filter {
-                        it.mediaId == entry.mediaListEntry.mediaId.toString()
+                        it.mediaId == entry!!.mediaListEntry.media!!.id.toString()
                     }.findAny().get()
-                    // Log.d("TEST", "${media!!.title!!.userPreferred!!} | ${dbMedia.curVolumes} | ${dbMedia.maxVolumes} | ${dbMedia.cost} | ${dbMedia.notes}")
-                    collection.add(
-                        TsundokuItem(
-                            mediaId = entry.mediaListEntry.mediaId.toString(),
-                            website = Website.ANILIST,
-                            title = media!!.title!!.userPreferred!!,
-                            countryOfOrigin = media.countryOfOrigin.toString(),
-                            status = MediaModel.getMediaStatus(media.status!!.name),
-                            format = MediaModel.getCorrectFormat(
-                                media.format!!.name,
-                                media.countryOfOrigin.toString()
-                            ),
-                            chapters = media.chapters ?: 0,
-                            notes = entry.mediaListEntry.notes ?: "",
-                            imageUrl = media.coverImage!!.medium!!,
-                            curVolumes = mutableStateOf(dbMedia.curVolumes.toString()),
-                            maxVolumes = mutableStateOf(dbMedia.maxVolumes.toString()),
-                            cost = dbMedia.cost
-                        )
-                    )
+                    collection.add(MediaModel.parseAniListMedia(entry!!.mediaListEntry.media!!, dbMedia))
                 }
 
                 // Add MangaDex Entries
@@ -213,16 +199,15 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 // collectionViewModel.sortTsundokuCollection() enable if adding MangaDex
                 if (collectionViewModel.isRefreshing.value) collectionViewModel.setIsRefreshing(false)
                 if (viewerViewModel.isLoading.value) {
-                    viewerViewModel.toggleTopAppBar()
-                    viewerViewModel.toggleBottomAppBar()
+                    viewerViewModel.turnOnAppBar()
                     viewerViewModel.setIsLoading(false)
                 }
             }
             is NetworkResource.Loading -> {
-                Log.i("Collecting Screen", "Loading Tsundoku Collection")
+                Log.i(APP_NAME, "Loading Tsundoku Collection")
             }
             else -> {
-                Log.e("Collecting Screen", "Unknown Error Getting Tsundoku Collection")
+                Log.e(APP_NAME, "Unknown Error Getting Tsundoku Collection")
             }
         }
     }

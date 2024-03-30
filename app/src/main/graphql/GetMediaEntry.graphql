@@ -1,5 +1,5 @@
-query GetMediaEntry($title: String, $type: MediaFormat) {
-    Media(search: $title, format: $type) {
+query GetMediaEntry($seriesId: Int, $title: String, $type: MediaFormat!) {
+    Media(id: $seriesId, search: $title, format: $type) {
         id
         countryOfOrigin
         format
@@ -11,6 +11,9 @@ query GetMediaEntry($title: String, $type: MediaFormat) {
         }
         title {
             userPreferred
+        }
+        mediaListEntry {
+            notes
         }
     }
 }

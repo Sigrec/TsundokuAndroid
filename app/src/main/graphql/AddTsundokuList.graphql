@@ -1,5 +1,5 @@
 mutation AddTsundokuList($customLists: [String]!) {
-    UpdateUser(mangaListOptions: {customLists: $customLists}) {
+    UpdateUser(mangaListOptions: { customLists: $customLists }) {
         id
     }
 }

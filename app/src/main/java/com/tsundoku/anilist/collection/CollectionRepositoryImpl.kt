@@ -8,7 +8,7 @@ import com.tsundoku.APP_NAME
 import com.tsundoku.GetCustomListsQuery
 import com.tsundoku.GetTsundokuCollectionQuery
 import com.tsundoku.ViewerQuery
-import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
+import com.tsundoku.anilist.AuthorizedClient
 import com.tsundoku.extensions.asResult
 import com.tsundoku.type.MediaListSort
 import kotlinx.coroutines.flow.Flow
@@ -18,7 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class CollectionRepositoryImpl @Inject constructor(
     private val aniListClient: ApolloClient,
-    preferencesRepo: PreferencesRepositoryImpl
+    @AuthorizedClient private val authAniListClient: ApolloClient,
 ): CollectionRepository {
     override fun getUserByUsername(): Flow<Result<ViewerQuery.Viewer>> {
         TODO("Not yet implemented")
@@ -28,13 +28,14 @@ class CollectionRepositoryImpl @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override fun getTsundokuCollection(username: String?, userId: Int?, titleSort: List<MediaListSort?>) = aniListClient
-        .query(GetTsundokuCollectionQuery(Optional.presentIfNotNull(username), Optional.presentIfNotNull(userId), titleSort))
-        .fetchPolicy(FetchPolicy.CacheAndNetwork)
-        .toFlow()
-        .asResult { data ->
-            data.MediaListCollection!!.lists!!.filter { list ->
-                list!!.name == APP_NAME
+    override fun getTsundokuCollection(username: String?, userId: Int?, titleSort: List<MediaListSort?>) =
+        authAniListClient
+            .query(GetTsundokuCollectionQuery(Optional.presentIfNotNull(username), Optional.presentIfNotNull(userId), titleSort))
+            .fetchPolicy(FetchPolicy.NetworkFirst)
+            .toFlow()
+            .asResult { data ->
+                data.MediaListCollection!!.lists!!.filter { list ->
+                    list!!.name == APP_NAME
+                }
             }
-        }
 }

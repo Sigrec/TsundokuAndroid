@@ -3,7 +3,6 @@ package com.tsundoku.ui.collection
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -59,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.tsundoku.ANILIST_MANGA_URL
+import com.tsundoku.APP_NAME
 import com.tsundoku.MANGADEX_MANGA_URL
 import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
@@ -99,7 +99,10 @@ fun SwipeMediaCardContainer(
                 viewerViewModel.getMediaCustomLists(item.mediaId.toInt()).collect {
                     when {
                         it is NetworkResource.Success -> {
-                            viewerViewModel.deleteAniListMediaFromCollection(item.mediaId.toInt(), ViewerModel.parseTrueCustomLists(StringBuilder(it.data.customLists.toString().trim())))
+                            val list = ViewerModel.parseTrueCustomLists(StringBuilder(it.data.customLists.toString().trim()))
+                            if (list.contains(APP_NAME)) {
+                                viewerViewModel.deleteAniListMediaFromCollection(item.mediaId.toInt(), list)
+                            }
                         }
                         else -> Log.d("TEST", "Getting Custom Lists for Media ${item.mediaId} Failed")
                     }
@@ -114,7 +117,7 @@ fun SwipeMediaCardContainer(
         exit = shrinkVertically(
             animationSpec = tween(animationDuration),
             shrinkTowards = Alignment.Bottom
-        ) + fadeOut(),
+        ),
         modifier = Modifier.border(0.dp, Color.Transparent, RoundedCornerShape(8.dp))
     ) {
         SwipeToDismissBox(
@@ -215,7 +218,7 @@ fun MediaCard(
                     modifier = Modifier
                         //.offset(y = (-4).dp)
                         .clickable { if (viewerViewModel.selectedItemIndex.intValue == -1) {
-                            if (viewerViewModel.showTopAppBar.value) viewerViewModel.toggleTopAppBar()
+                            if (viewerViewModel.showTopAppBar.value) viewerViewModel.turnOffTopAppBar()
                             viewerViewModel.setSelectedItemIndex(index)
                         }                                                              },
                     textAlign = TextAlign.Start,

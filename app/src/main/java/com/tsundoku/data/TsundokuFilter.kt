@@ -1,6 +1,8 @@
 package com.tsundoku.data
 
-enum class TsundokuFilter() {
+import androidx.compose.ui.util.fastFirstOrNull
+
+enum class TsundokuFilter(val value: String) {
     NONE("None"),
     MANGA("Manga"),
     NOVEL("Novel"),
@@ -12,15 +14,13 @@ enum class TsundokuFilter() {
     COMPLETE("Complete"),
     INCOMPLETE("Incomplete");
 
-    lateinit var value: String
-
-    constructor(
-        value: String,
-    ) : this() {
-        this.value = value
+    companion object {
+        fun parse(input: String): TsundokuFilter {
+            return TsundokuFilter.entries.fastFirstOrNull { it.value == input } ?: NONE
+        }
     }
 
-    companion object {
-        fun getFilterValue(value: String) = TsundokuFilter.entries.first { it.value == value }
+    override fun toString(): String {
+        return value
     }
 }

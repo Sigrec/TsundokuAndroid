@@ -23,6 +23,7 @@ import com.ramcosta.composedestinations.navigation.dependency
 import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.enums.Lang
 import com.tsundoku.anilist.viewer.ViewerViewModel
+import com.tsundoku.destinations.AddMediaScreenDestination
 import com.tsundoku.destinations.CollectionScreenDestination
 import com.tsundoku.models.ViewerModel
 import com.tsundoku.ui.BottomNavigationBar
@@ -59,19 +60,17 @@ class Launch : ComponentActivity() {
                 val navController = rememberNavController()
                 collectionViewModel.onViewer(true)
                 Scaffold(
-                    bottomBar = { if (viewerViewModel.showBottomAppBar.value) BottomNavigationBar(navController) },
+                    bottomBar = { if (viewerViewModel.showBottomAppBar.value) BottomNavigationBar(viewerViewModel, navController) },
                     topBar = { if (viewerViewModel.showTopAppBar.value) CollectionTopAppBar(viewerViewModel, collectionViewModel) },
                 ) {
-                    LaunchedEffect(Unit) {
-                        viewerViewModel.toggleTopAppBar()
-                        viewerViewModel.toggleBottomAppBar()
-                    }
+                    LaunchedEffect(Unit) { viewerViewModel.turnOffAppBar() }
                     DestinationsNavHost(
                         navGraph = NavGraphs.root,
                         modifier = androidx.compose.ui.Modifier.padding(it),
                         navController = navController,
                         dependenciesContainerBuilder = {
                             dependency(CollectionScreenDestination) { collectionViewModel }
+                            dependency(AddMediaScreenDestination) { collectionViewModel }
                             dependency(viewerViewModel)
                         }
                     )
