@@ -63,22 +63,23 @@ fun CollectionScreen(
             modifier = Modifier
                 .padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             // TODO - Srcollstate not saved when filtering then coming back
+            // TODO - Multiple reload when opening edit media pane
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
             ) {
                 if (collectionUiState.onViewer) {
                     Log.d(APP_NAME, "Showing Viewer Collection")
-                    itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
-                        SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, index = index, viewerViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
+                    itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { _, item ->
+                        SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
                     }
                 }
                 else {
                     Log.d(APP_NAME, "Showing Another Users Collection")
                     itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
-                        MediaCard(item = item, index = index, viewerViewModel, collectionUiState, LocalUriHandler.current)
+                        MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current)
                     }
                 }
             }
@@ -199,6 +200,7 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 // collectionViewModel.sortTsundokuCollection() enable if adding MangaDex
                 if (collectionViewModel.isRefreshing.value) collectionViewModel.setIsRefreshing(false)
                 if (viewerViewModel.isLoading.value) {
+                    Log.d(APP_NAME, "TURNING OFF APP BAR")
                     viewerViewModel.turnOnAppBar()
                     viewerViewModel.setIsLoading(false)
                 }

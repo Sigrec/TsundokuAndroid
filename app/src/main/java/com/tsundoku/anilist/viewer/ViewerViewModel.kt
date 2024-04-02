@@ -70,25 +70,22 @@ class ViewerViewModel @Inject constructor(
     fun setCurrencySymbol(symbol: String) { _viewerState.value.currencySymbol = symbol }
     fun getCurrencySymbol(): String = _viewerState.value.currencySymbol
 
-//    fun setSelectedPaneIndex(index: Int) { _viewerState.value.selectedPaneIndex = index }
-//    fun getSelectedPaneIndex(): Int = _viewerState.value.selectedPaneIndex
-
     val showTopAppBar: MutableState<Boolean> = mutableStateOf(true)
-    fun turnOffTopAppBar() { showTopAppBar.value = false }
-    fun turnOnTopAppBar() { showTopAppBar.value = true }
+    fun turnOffTopAppBar() { if (showTopAppBar.value) showTopAppBar.value = false }
+    fun turnOnTopAppBar() { if (showBottomAppBar.value) showTopAppBar.value = true }
 
     val showBottomAppBar: MutableState<Boolean> = mutableStateOf(true)
-    private fun turnOffBottomAppBar() { showBottomAppBar.value = false }
-    private fun turnOnBottomAppBar() { showBottomAppBar.value = true }
+    private fun turnOffBottomAppBar() { if (!showTopAppBar.value) showBottomAppBar.value = false }
+    private fun turnOnBottomAppBar() { if (!showBottomAppBar.value) showBottomAppBar.value = true }
 
     fun turnOffAppBar(){
-        if (showTopAppBar.value) turnOffTopAppBar()
-        if (showBottomAppBar.value) turnOffBottomAppBar()
+        turnOffTopAppBar()
+        turnOffBottomAppBar()
     }
 
     fun turnOnAppBar(){
-        if (!showTopAppBar.value) turnOnTopAppBar()
-        if (!showBottomAppBar.value) turnOnBottomAppBar()
+        turnOnTopAppBar()
+        turnOnBottomAppBar()
     }
 
     /**

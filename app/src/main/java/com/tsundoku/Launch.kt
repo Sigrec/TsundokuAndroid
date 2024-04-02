@@ -63,7 +63,10 @@ class Launch : ComponentActivity() {
                     bottomBar = { if (viewerViewModel.showBottomAppBar.value) BottomNavigationBar(viewerViewModel, navController) },
                     topBar = { if (viewerViewModel.showTopAppBar.value) CollectionTopAppBar(viewerViewModel, collectionViewModel) },
                 ) {
-                    LaunchedEffect(Unit) { viewerViewModel.turnOffAppBar() }
+                    LaunchedEffect(Unit) {
+                        viewerViewModel.setIsLoading(true)
+                        viewerViewModel.turnOffAppBar()
+                    }
                     DestinationsNavHost(
                         navGraph = NavGraphs.root,
                         modifier = androidx.compose.ui.Modifier.padding(it),
@@ -103,7 +106,6 @@ fun LaunchPane(
 //    }
     val isLoggedIn by viewerViewModel.isLoggedIn.collectAsState(initial = false)
     Log.d("Tsundoku", "User ${if(isLoggedIn) "is" else "is not"} logged in")
-    viewerViewModel.setIsLoading(true)
     if(isLoggedIn) {
         if (viewerViewModel.isLoading.value) LoadingScreen()
         val viewer by viewerViewModel.aniListViewer.collectAsState()

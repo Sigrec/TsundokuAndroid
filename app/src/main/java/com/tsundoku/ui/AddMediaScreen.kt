@@ -1,6 +1,8 @@
 package com.tsundoku.ui
 
 import android.util.Log
+import android.view.Gravity
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.ramcosta.composedestinations.annotation.Destination
 import com.tsundoku.APP_NAME
 import com.tsundoku.anilist.collection.CollectionViewModel
@@ -60,14 +61,15 @@ import java.math.BigDecimal
 @Composable
 fun AddMediaScreen(
     viewerViewModel: ViewerViewModel,
-    collectionViewModel: CollectionViewModel
+    collectionViewModel: CollectionViewModel,
 ) {
     if (viewerViewModel.showTopAppBar.value) viewerViewModel.turnOffTopAppBar()
     var title: String by rememberSaveable { mutableStateOf("") }
-    var curVolumes: String by rememberSaveable { mutableStateOf("0") }
-    var maxVolumes: String by rememberSaveable { mutableStateOf("1") }
+    var curVolumes: String by rememberSaveable { mutableStateOf("") }
+    var maxVolumes: String by rememberSaveable { mutableStateOf("") }
     var cost: String by rememberSaveable { mutableStateOf("") }
     var isAddButtonEnabled: Boolean by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -155,7 +157,7 @@ fun AddMediaScreen(
                 value = curVolumes,
                 onValueChange = {
                     if (MediaModel.volumeNumRegex.matches(it)) curVolumes = it
-                    isAddButtonEnabled = it.isNotBlank() && it.toInt() <= maxVolumes.toInt()
+                    isAddButtonEnabled = if (it.isNotBlank() && maxVolumes.isNotBlank()) (it.toInt() <= maxVolumes.toInt()) else false
                 },
                 label = { Text("Cur Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
                 modifier = Modifier
@@ -181,7 +183,7 @@ fun AddMediaScreen(
                 value = maxVolumes,
                 onValueChange = {
                     if (MediaModel.volumeNumRegex.matches(it)) maxVolumes = it
-                    isAddButtonEnabled = it.isNotBlank() && it.toInt() >= curVolumes.toInt()
+                    isAddButtonEnabled = if(it.isNotBlank() && curVolumes.isNotBlank()) (it.toInt() >= curVolumes.toInt()) else false
                 },
                 label = { Text("Max Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
                 modifier = Modifier
@@ -294,9 +296,11 @@ fun AddMediaScreen(
                     }
                 }
             }
-            var openAlertDialog by remember { mutableStateOf(false) }
+            var openTryAgainDialog by remember { mutableStateOf(false) }
+            var openAlreadyExistsDialog by remember { mutableStateOf(false) }
+            var showSuccessToast by remember { mutableStateOf(false) }
             val coroutineScope = rememberCoroutineScope()
-            val context = LocalContext.current
+
             OutlinedButton(
                 modifier = Modifier
                     .weight(0.5f),
@@ -327,16 +331,17 @@ fun AddMediaScreen(
                                             // Add to list
                                             collectionViewModel.addItemToTsundokuCollection(item!!)
 
-                                            curVolumes = "0"
-                                            maxVolumes = "1"
-                                            cost = "0.00"
+                                            // Reset text fields to empty
+                                            curVolumes = ""
+                                            maxVolumes = ""
+                                            cost = ""
+                                            title = ""
 
                                             // Add to AniList custom list
                                             viewerViewModel.getMediaCustomLists(it.data.id).collect { getList ->
-                                                Log.d("Tsundoku", "Item = null? ${item == null}")
                                                 when(getList) {
                                                     is NetworkResource.Success -> {
-                                                        Log.d("Tsundoku", "Custom Lists for ${item!!.mediaId} = ${ViewerModel.parseTrueCustomLists(StringBuilder(getList.data.customLists.toString().trim()))}")
+                                                        Log.d("Tsundoku", "Custom Lists for ${item!!.mediaId} is ${ViewerModel.parseTrueCustomLists(StringBuilder(getList.data.customLists.toString().trim()))}")
                                                         item?.mediaId?.toInt()?.let { itItem ->
                                                             viewerViewModel.addAniListMediaToCollection(itItem, ViewerModel.parseTrueCustomLists(StringBuilder(getList.data.customLists.toString().trim())))
                                                         }
@@ -348,17 +353,18 @@ fun AddMediaScreen(
                                                         }
                                                     }
                                                 }
+                                                title = item!!.title
+                                                showSuccessToast = true
                                             }
                                         } else {
-                                            /* TODO - Create Dialog */
-                                            Log.i("Tsundoku", "${item!!.mediaId} Already Exists in Collection")
-                                            // Toast.makeText(context, "Already Exists", Toast.LENGTH_SHORT).show()
+                                            openAlreadyExistsDialog = true
+                                            Log.w("Tsundoku", "\"$title\" Already Exists in Collection")
                                         }
                                     }
                                     is NetworkResource.Loading -> {  }
                                     else -> {
-                                        openAlertDialog = true
-                                        Log.i(APP_NAME, "Error! \"$title\" Does not Exist in AniList or Mangadex")
+                                        openTryAgainDialog = true
+                                        Log.w(APP_NAME, "\"$title\" Does not Exist in AniList or Mangadex")
                                     }
                                 }
                             }
@@ -380,45 +386,30 @@ fun AddMediaScreen(
                 )
             }
 
-            if (openAlertDialog) {
+            if (openTryAgainDialog) {
                 AlertDialog(
-                    onDismissRequest = { openAlertDialog = false },
-                    onConfirmation = { openAlertDialog = false },
-                    dialogTitle = "Try Again!",
-                    dialogText = "\"$title\" Does not Exist",
-                    icon = Icons.Default.Info
+                    dialogTitle = "Does not Exist!",
+                    dialogText = "\"$title\"",
+                    icon = Icons.Default.Info,
+                    onDismissRequest = { openTryAgainDialog = false },
+                    onConfirmation = { openTryAgainDialog = false },
                 )
             }
+            else if(openAlreadyExistsDialog) {
+                AlertDialog(
+                    dialogTitle = "Already Added!",
+                    dialogText = "\"$title\"",
+                    icon = Icons.Default.Info,
+                    onDismissRequest = { openAlreadyExistsDialog = false },
+                    onConfirmation = { openAlreadyExistsDialog = false },
+                )
+            }
+            else if(showSuccessToast) {
+                val toast = Toast.makeText(context, "\"$title\" Added", Toast.LENGTH_SHORT)
+                toast.setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 0)
+                toast.show()
+                title = ""
+            }
         }
-    }
-}
-
-@Composable
-fun FormatDropdownMenuItem(
-    text: String,
-    clickEvent: () -> Unit
-) {
-    DropdownMenuItem(
-        text = { Text(text, fontWeight = FontWeight.ExtraBold, fontFamily = interFont) },
-        onClick = { clickEvent },
-        colors = MenuItemColors(
-            textColor = Color(0xFFC8C9E4),
-            leadingIconColor = Color(0xFF42B1EA),
-            trailingIconColor = Color(0xFF42B1EA),
-            disabledLeadingIconColor = Color.Transparent,
-            disabledTextColor = Color.Transparent,
-            disabledTrailingIconColor = Color.Transparent
-        )
-    )
-}
-
-@Composable
-fun AddSeriesErrorDialog(
-
-) {
-    Dialog(
-        onDismissRequest = {  },
-    ) {
-
     }
 }

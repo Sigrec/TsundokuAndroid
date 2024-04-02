@@ -3,6 +3,7 @@ package com.tsundoku.ui.collection
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -97,27 +98,29 @@ fun SwipeMediaCardContainer(
             viewerViewModel.deleteDatabaseMedia(listOf(item.mediaId))
             if(item.website == Website.ANILIST) {
                 viewerViewModel.getMediaCustomLists(item.mediaId.toInt()).collect {
-                    when {
-                        it is NetworkResource.Success -> {
+                    when (it) {
+                        is NetworkResource.Success -> {
                             val list = ViewerModel.parseTrueCustomLists(StringBuilder(it.data.customLists.toString().trim()))
                             if (list.contains(APP_NAME)) {
                                 viewerViewModel.deleteAniListMediaFromCollection(item.mediaId.toInt(), list)
                             }
                         }
-                        else -> Log.d("TEST", "Getting Custom Lists for Media ${item.mediaId} Failed")
+                        is NetworkResource.Loading -> { Log.d("Tsundoku", "Loading Custom Lists for Media ${item.mediaId}") }
+                        else -> Log.e("Tsundoku", "Getting Custom Lists for Media ${item.mediaId} Failed")
                     }
                 }
             }
+            Log.d("TEST", "Deleting from Actual List")
             collectionViewModel.deleteItemFromTsundokuCollection(item)
         }
     }
 
     AnimatedVisibility(
         visible = !isRemoved,
+        // enter = expandVertically(),
         exit = shrinkVertically(
-            animationSpec = tween(animationDuration),
-            shrinkTowards = Alignment.Bottom
-        ),
+            animationSpec = tween(animationDuration)
+        ) + fadeOut(),
         modifier = Modifier.border(0.dp, Color.Transparent, RoundedCornerShape(8.dp))
     ) {
         SwipeToDismissBox(
@@ -166,8 +169,8 @@ fun DeleteTsundokuItemBackground(
 @Composable
 fun MediaCard(
     item: TsundokuItem,
-    index: Int,
     viewerViewModel: ViewerViewModel,
+    collectionViewModel: CollectionViewModel,
     collectionUiState: CollectionUiState,
     uriHandler: UriHandler
 ) {
@@ -217,10 +220,12 @@ fun MediaCard(
                     text = item.title,
                     modifier = Modifier
                         //.offset(y = (-4).dp)
-                        .clickable { if (viewerViewModel.selectedItemIndex.intValue == -1) {
-                            if (viewerViewModel.showTopAppBar.value) viewerViewModel.turnOffTopAppBar()
-                            viewerViewModel.setSelectedItemIndex(index)
-                        }                                                              },
+                        .clickable {
+                            if (viewerViewModel.selectedItemIndex.intValue == -1) {
+                                viewerViewModel.turnOffTopAppBar()
+                                viewerViewModel.setSelectedItemIndex(collectionViewModel.getTsundokuItemIndex(item))
+                            }
+                         },
                     textAlign = TextAlign.Start,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,

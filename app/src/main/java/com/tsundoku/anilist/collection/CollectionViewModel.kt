@@ -2,6 +2,7 @@ package com.tsundoku.anilist.collection
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -85,11 +86,15 @@ class CollectionViewModel @Inject constructor(
     val filteringState: State<Boolean> = _filteringState
     fun toggleFilteringState() { _filteringState.value = _filteringState.value xor true }
 
-    private val _tsundokuCollection: MutableStateFlow<MutableList<TsundokuItem>> = MutableStateFlow(mutableListOf())
+    private val _tsundokuCollection: MutableStateFlow<MutableList<TsundokuItem>> = MutableStateFlow(mutableStateListOf())
     @OptIn(FlowPreview::class)
-    var tsundokuCollection: StateFlow<List<TsundokuItem>> = combine(searchText.debounce { if (it.isNotBlank()) 1000L else 500L }, filter.debounce(100L), _tsundokuCollection)
+    val tsundokuCollection: StateFlow<List<TsundokuItem>> = combine(
+        searchText.debounce { if (it.isNotBlank()) 800L else 500L },
+        filter.debounce(100L),
+        _tsundokuCollection
+    )
     { text, curFilter, collection ->
-             if (text.isNotBlank()) {
+            if (text.isNotBlank()) {
                 collection.filter {
                     it.title.contains(text, ignoreCase = true)
                 }
@@ -110,14 +115,15 @@ class CollectionViewModel @Inject constructor(
                     }
                 }
             }
-            else collection
+            else {
+                collection
+            }
     }
     .stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(1000),
         _tsundokuCollection.value
     )
-
     fun setTsundokuCollection(newCollection: MutableList<TsundokuItem>) {
         newCollection.sortBy { it.title }
         _tsundokuCollection.update { newCollection }
@@ -125,26 +131,29 @@ class CollectionViewModel @Inject constructor(
     fun clearTsundokuCollection() {
         _tsundokuCollection.value.clear()
     }
-
     fun addItemToTsundokuCollection(item: TsundokuItem) {
         if (_tsundokuCollection.value.size == 0) {
             _tsundokuCollection.value.add(item)
         }
         else {
-            var index = _tsundokuCollection.value.binarySearch(item, compareBy { it.title })
-            index = if (index < 0) index.inv() else index
-            _tsundokuCollection.value.add(index, item)
+            val index = _tsundokuCollection.value.binarySearch(item, compareBy { it.title })
+            _tsundokuCollection.value.add(if(index < 0) index.inv() else index, item)
         }
     }
-
+    fun deleteItemFromTsundokuCollection(index: Int) {
+        _tsundokuCollection.value.removeAt(index)
+    }
     fun deleteItemFromTsundokuCollection(item: TsundokuItem) {
-        val list = _tsundokuCollection.value.toMutableList()
-        list.forEachIndexed { index, it ->
-            if (it.mediaId == item.mediaId) {
+        val list = _tsundokuCollection.value
+        list.forEachIndexed { index, curItem ->
+            if (curItem.mediaId == item.mediaId) {
                 list.removeAt(index)
             }
         }
         _tsundokuCollection.update { list }
     }
     fun sortTsundokuCollection() { _tsundokuCollection.value.sortBy { it.title } }
+    fun getTsundokuItemIndex(item: TsundokuItem): Int {
+        return _tsundokuCollection.value.indexOf(item)
+    }
 }
