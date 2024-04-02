@@ -13,6 +13,7 @@ query GetMediaEntry($seriesId: Int, $title: String, $type: MediaFormat!) {
             userPreferred
         }
         mediaListEntry {
+            private
             notes
         }
     }

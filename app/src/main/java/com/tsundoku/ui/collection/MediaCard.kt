@@ -84,8 +84,8 @@ fun SwipeMediaCardContainer(
 ) {
     var isRemoved by remember { mutableStateOf(false) }
     val state = rememberSwipeToDismissBoxState(
-        confirmValueChange =  { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
+        confirmValueChange =  {
+            if (it == SwipeToDismissBoxValue.Settled) {
                 isRemoved = true
                 true
             } else false
@@ -104,22 +104,21 @@ fun SwipeMediaCardContainer(
                             if (list.contains(APP_NAME)) {
                                 viewerViewModel.deleteAniListMediaFromCollection(item.mediaId.toInt(), list)
                             }
+                            collectionViewModel.deleteItemFromTsundokuCollection(item)
                         }
                         is NetworkResource.Loading -> { Log.d("Tsundoku", "Loading Custom Lists for Media ${item.mediaId}") }
                         else -> Log.e("Tsundoku", "Getting Custom Lists for Media ${item.mediaId} Failed")
                     }
                 }
             }
-            Log.d("TEST", "Deleting from Actual List")
-            collectionViewModel.deleteItemFromTsundokuCollection(item)
         }
     }
 
     AnimatedVisibility(
         visible = !isRemoved,
-        // enter = expandVertically(),
         exit = shrinkVertically(
-            animationSpec = tween(animationDuration)
+            animationSpec = tween(animationDuration),
+            shrinkTowards = Alignment.Top
         ) + fadeOut(),
         modifier = Modifier.border(0.dp, Color.Transparent, RoundedCornerShape(8.dp))
     ) {

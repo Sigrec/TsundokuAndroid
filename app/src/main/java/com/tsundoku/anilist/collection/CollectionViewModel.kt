@@ -1,5 +1,6 @@
 package com.tsundoku.anilist.collection
 
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
@@ -76,7 +77,6 @@ class CollectionViewModel @Inject constructor(
     val searchingState: State<Boolean> = _searchingState
     fun toggleSearchingState() { _searchingState.value = _searchingState.value xor true }
 
-
     private val _filter = MutableStateFlow(TsundokuFilter.NONE)
     val filter = _filter.asStateFlow()
     fun updateFilter(tsundokuFilter: TsundokuFilter) {
@@ -91,7 +91,7 @@ class CollectionViewModel @Inject constructor(
     val tsundokuCollection: StateFlow<List<TsundokuItem>> = combine(
         searchText.debounce { if (it.isNotBlank()) 800L else 500L },
         filter.debounce(100L),
-        _tsundokuCollection
+        _tsundokuCollection.asStateFlow()
     )
     { text, curFilter, collection ->
             if (text.isNotBlank()) {
@@ -116,6 +116,7 @@ class CollectionViewModel @Inject constructor(
                 }
             }
             else {
+                Log.d("TEST", "RESETTING COLLECTION")
                 collection
             }
     }
@@ -144,13 +145,7 @@ class CollectionViewModel @Inject constructor(
         _tsundokuCollection.value.removeAt(index)
     }
     fun deleteItemFromTsundokuCollection(item: TsundokuItem) {
-        val list = _tsundokuCollection.value
-        list.forEachIndexed { index, curItem ->
-            if (curItem.mediaId == item.mediaId) {
-                list.removeAt(index)
-            }
-        }
-        _tsundokuCollection.update { list }
+        _tsundokuCollection.update { (it - item).toMutableList() }
     }
     fun sortTsundokuCollection() { _tsundokuCollection.value.sortBy { it.title } }
     fun getTsundokuItemIndex(item: TsundokuItem): Int {

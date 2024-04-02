@@ -335,7 +335,6 @@ fun AddMediaScreen(
                                             curVolumes = ""
                                             maxVolumes = ""
                                             cost = ""
-                                            title = ""
 
                                             // Add to AniList custom list
                                             viewerViewModel.getMediaCustomLists(it.data.id).collect { getList ->
@@ -353,7 +352,6 @@ fun AddMediaScreen(
                                                         }
                                                     }
                                                 }
-                                                title = item!!.title
                                                 showSuccessToast = true
                                             }
                                         } else {
@@ -409,7 +407,9 @@ fun AddMediaScreen(
                 toast.setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 0)
                 toast.show()
                 title = ""
+                showSuccessToast = false
             }
+            else title = ""
         }
     }
 }

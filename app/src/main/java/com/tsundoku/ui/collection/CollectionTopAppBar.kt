@@ -62,7 +62,6 @@ import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.TsundokuFilter
 import com.tsundoku.interFont
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -110,7 +109,6 @@ fun CollectionDefaultTopAppBar(
             IconButton(onClick = {
                 coroutineScope.launch(Dispatchers.IO) {
                     collectionViewModel.setIsRefreshing(true)
-                    delay(3000L)
                     fetchTsundokuCollection(viewerViewModel, collectionViewModel)
                 }
             }) {

@@ -25,6 +25,7 @@ fragment mediaListEntry on MediaList {
             userPreferred
         }
         mediaListEntry {
+            private
             notes
         }
     }

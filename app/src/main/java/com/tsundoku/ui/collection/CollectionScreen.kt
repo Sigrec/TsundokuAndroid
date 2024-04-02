@@ -2,10 +2,10 @@ package com.tsundoku.ui.collection
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -59,28 +59,24 @@ fun CollectionScreen(
         color = Color(0xFF13171D),
     ) {
         // Set state functionality for filtering
-        Column(
+        // TODO - Srcollstate not saved when filtering then coming back
+        // TODO - Multiple reload when opening edit media pane
+        LazyColumn(
             modifier = Modifier
                 .padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
+            verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            // TODO - Srcollstate not saved when filtering then coming back
-            // TODO - Multiple reload when opening edit media pane
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
-            ) {
-                if (collectionUiState.onViewer) {
-                    Log.d(APP_NAME, "Showing Viewer Collection")
-                    itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { _, item ->
-                        SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
-                    }
+            if (collectionUiState.onViewer) {
+                Log.d(APP_NAME, "Showing Viewer Collection")
+                itemsIndexed(tsundokuCollection, key = { _, item -> item.mediaId }) { _, item ->
+                    SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
                 }
-                else {
-                    Log.d(APP_NAME, "Showing Another Users Collection")
-                    itemsIndexed(items = tsundokuCollection, key = { _, item -> item.mediaId }) { index, item ->
-                        MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current)
-                    }
+            }
+            else {
+                Log.d(APP_NAME, "Showing Another Users Collection")
+                items(tsundokuCollection, key = { item -> item.mediaId }) { item ->
+                    MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current)
                 }
             }
         }
@@ -93,8 +89,7 @@ fun CollectionScreen(
     if (viewerViewModel.isLoading.value){
         LoadingScreen()
     }
-
-    if (collectionViewModel.isRefreshing.value) LoadingIndicator()
+    else if (collectionViewModel.isRefreshing.value) LoadingIndicator()
 }
 
 /**

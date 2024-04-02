@@ -54,7 +54,7 @@ fun BottomNavigationBar(
             )
         )
 
-        items.fastForEachIndexed { index, item ->
+        items.forEachIndexed { index, item ->
             FloatingActionButton(
                 modifier = Modifier.weight(1f),
                 containerColor = if (selectedPaneIndex == index) TsundokuBackground else Color.Transparent,
