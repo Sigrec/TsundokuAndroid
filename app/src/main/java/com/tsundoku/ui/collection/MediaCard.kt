@@ -72,7 +72,6 @@ import com.tsundoku.models.Website
 import kotlinx.coroutines.time.delay
 import java.time.Duration
 
-// TODO - Weird bug where after a series is deleted there is padding left over
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeMediaCardContainer(
@@ -92,6 +91,7 @@ fun SwipeMediaCardContainer(
         }
     )
 
+    // TODO - Fix issue where private media doesn't get deleted properly?
     LaunchedEffect(key1 = isRemoved) {
         if (isRemoved) {
             delay(Duration.ofMillis(animationDuration.toLong()))

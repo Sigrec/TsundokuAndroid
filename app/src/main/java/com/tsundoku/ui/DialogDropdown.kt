@@ -1,5 +1,7 @@
 package com.tsundoku.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -54,7 +57,7 @@ fun <T> DialogDropdownMenu(
     items: List<T>,
     selectedIndex: Int,
     onItemSelected: (index: Int, item: T) -> Unit,
-    itemClicked: () -> Unit,
+    onClosed: () -> Unit = { /* Do Nothing */ },
     drawItem: @Composable (T, Boolean, Boolean, () -> Unit) -> Unit = { item, selected, itemEnabled, onClick ->
         DialogDropdownMenuItem(
             text = item.toString(),
@@ -70,25 +73,27 @@ fun <T> DialogDropdownMenu(
             .height(IntrinsicSize.Min),
         contentAlignment = Alignment.Center
     ) {
-        OutlinedTextField(
-            label = { },
-            value = items[selectedIndex].toString(),
-            enabled = enabled,
-            modifier = modifier.height(IntrinsicSize.Min),
-            leadingIcon = {
-                if (enableLeadingIcon) {
+        if (enableLeadingIcon && enableTrailingIcon) {
+            OutlinedTextField(
+                label = { },
+                value = items[selectedIndex].toString(),
+                enabled = enabled,
+                modifier = modifier.height(IntrinsicSize.Min),
+                leadingIcon = {
                     Icon(
+                        modifier = Modifier.width(IntrinsicSize.Min),
                         imageVector = Icons.Default.KeyboardArrowDown,
                         tint = Color(0xFF42B1EA),
                         contentDescription = null
                     )
-                }
-            },
-            trailingIcon = {
-                if (enableTrailingIcon) {
-                    IconButton(onClick = {
-                        itemClicked()
-                    }) {
+                },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            onClosed()
+                        },
+                        modifier = Modifier.width(IntrinsicSize.Min)
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             tint = Color(0xFF42B1EA),
@@ -96,32 +101,73 @@ fun <T> DialogDropdownMenu(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                }
-            },
-            onValueChange = { },
-            readOnly = true,
-            textStyle = TextStyle(
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontFamily = interFont,
-                color = Color(0xFF9EAEBD),
-                textAlign = TextAlign.Center
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedTextColor = Color(0xFF42B1EA),
-                unfocusedBorderColor = Color(0xFF42B1EA),
-                unfocusedContainerColor = Color(0xFF1F232D),
-                unfocusedLabelColor = Color(0xFF9EAEBD),
-                focusedTextColor = Color(0xFFC8C9E4),
-                focusedContainerColor = Color(0xFF1F232D),
+                },
+                onValueChange = { },
+                readOnly = true,
+                textStyle = TextStyle(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = interFont,
+                    color = Color(0xFF9EAEBD),
+                    textAlign = TextAlign.Center
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedTextColor = Color(0xFF42B1EA),
+                    unfocusedBorderColor = Color(0xFF42B1EA),
+                    unfocusedContainerColor = Color(0xFF1F232D),
+                    unfocusedLabelColor = Color(0xFF9EAEBD),
+                    focusedTextColor = Color(0xFFC8C9E4),
+                    focusedContainerColor = Color(0xFF1F232D),
+                )
             )
-        )
+        }
+        else {
+            Box(
+                modifier = modifier
+                    .background(Color(0xFF2B2D42))
+                    .border(2.dp, Color(0xFF42B1EA), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = items[selectedIndex].toString(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = interFont,
+                    color = Color(0xFF9EAEBD),
+                    textAlign = TextAlign.Center
+                )
+            }
+//            TextField(
+//                value = items[selectedIndex].toString(),
+//                enabled = enabled,
+//                onValueChange = { },
+//                readOnly = true,
+//                textStyle = TextStyle(
+//                    fontSize = 20.sp,
+//                    fontWeight = FontWeight.ExtraBold,
+//                    fontFamily = interFont,
+//                    color = Color(0xFF9EAEBD),
+//                    textAlign = TextAlign.Center
+//                ),
+//                colors = TextFieldDefaults.colors(
+////                    unfocusedTextColor = Color(0xFF42B1EA),
+////                    unfocusedBorderColor = Color(0xFF42B1EA),
+////                    unfocusedContainerColor = Color(0xFF1F232D),
+////                    unfocusedLabelColor = Color(0xFF9EAEBD),
+////                    focusedTextColor = Color(0xFFC8C9E4),
+////                    focusedContainerColor = Color(0xFF1F232D),
+//                )
+//            )
+        }
 
         // Transparent clickable surface on top of OutlinedTextField
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 0.dp, end = 25.dp)
+                .padding(
+                    top = 0.dp,
+                    end = if (enableLeadingIcon && enableTrailingIcon) 25.dp else 0.dp
+                )
                 .clip(MaterialTheme.shapes.extraSmall)
                 .clickable(enabled = enabled) { expanded = true },
             color = Color.Transparent,
@@ -143,7 +189,9 @@ fun <T> DialogDropdownMenu(
                     }
                 }
 
-                LazyColumn(modifier = Modifier.fillMaxHeight(0.9f).fillMaxWidth(), state = listState) {
+                LazyColumn(modifier = Modifier
+                    .fillMaxHeight(0.9f)
+                    .fillMaxWidth(), state = listState) {
                     if (notSetLabel != null) {
                         item {
                             DialogDropdownMenuItem(
@@ -166,7 +214,10 @@ fun <T> DialogDropdownMenu(
                         }
 
                         if (index < items.lastIndex) {
-                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color(0xFF42B1EA),
+                                thickness = 2.dp)
                         }
                     }
                 }

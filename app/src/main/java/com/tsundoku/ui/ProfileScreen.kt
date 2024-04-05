@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +46,7 @@ import com.tsundoku.interFont
 import com.tsundoku.models.MediaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Currency
 
 @Destination(route = "profile")
 @Composable
@@ -62,7 +62,8 @@ fun ProfileScreen(
     val viewer = viewerState.viewer
     val coroutineScope = rememberCoroutineScope()
 
-    // TODO - Add pie chart and functionality for log out and currency select dropdown
+    // TODO - Add pie chart and functionality
+    // TODO - Add logout functionality
     Box(
         modifier = Modifier
             .fillMaxSize(),
@@ -78,7 +79,7 @@ fun ProfileScreen(
             AsyncImage(
                 modifier = Modifier
                     .fillMaxWidth(0.33f)
-                    .fillMaxHeight(0.18f)
+                    .fillMaxHeight(0.16f)
                     .clip(RoundedCornerShape(21.dp))
                     .border(2.dp, Color(0xFF42B1EA), RoundedCornerShape(21.dp)),
                 model = ImageRequest.Builder(LocalContext.current)
@@ -162,16 +163,19 @@ fun ProfileScreen(
                         )
                     }
                     ProfileSeparator()
-                    var selectedIndex by remember { mutableIntStateOf(0) }
+
+                    val currencySymbols = Currency.getAvailableCurrencies().map { it.symbol }.sortedBy { it }.sortedBy { it.length }
+                    var selectedIndex by remember { mutableIntStateOf(currencySymbols.indexOf(viewerState.currencySymbol)) }
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         DialogDropdownMenu(
                             modifier = Modifier
-                                .width(125.dp),
-                            items = listOf("$", "#"),
+                                .fillMaxHeight()
+                                .width(130.dp),
+                            items = currencySymbols,
                             enableTrailingIcon = false,
                             enableLeadingIcon = false,
                             selectedIndex = selectedIndex,
@@ -184,20 +188,16 @@ fun ProfileScreen(
                                     viewerViewModel.updateCurrencyCode(currencyCode)
                                 }
                             },
-                            itemClicked = {
-
-                            }
                         )
                         Button(
                             onClick = {  },
-                            border = BorderStroke(1.dp, Color(0xFF42B1EA)),
+                            border = BorderStroke(2.dp, Color(0xFF42B1EA)),
                             modifier = Modifier
-                                .width(125.dp)
-                                .height(57.dp)
-                                .clip(MaterialTheme.shapes.extraSmall),
+                                .fillMaxHeight()
+                                .width(130.dp),
                             // border = BorderStroke(width = 2.dp, color = Color(0xFF42B1EA)),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF191D26),
+                                containerColor = Color(0xFF2B2D42),
                                 contentColor = Color(0xFF42B1EA)
                             ),
                             content = {
@@ -206,7 +206,9 @@ fun ProfileScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     fontFamily = interFont,
                                     fontSize = 20.sp,
-                                    color = Color(0xFF9EAEBD)
+                                    color = Color(0xFF9EAEBD),
+                                    maxLines = 1,
+                                    softWrap = false,
                                 )
                             }
                         )
@@ -244,9 +246,11 @@ fun ProfileStat(
 }
 
 @Composable
-fun ProfileSeparator() {
+fun ProfileSeparator(
+    modifier: Modifier = Modifier
+) {
     HorizontalDivider(
-        modifier = Modifier.fillMaxWidth(0.9f),
+        modifier = modifier.fillMaxWidth(0.9f),
         thickness = 2.dp,
         color = Color(0xFF42B1EA)
     )
@@ -354,37 +358,41 @@ fun ProfilePreview() {
                         )
                     }
                     ProfileSeparator()
+                    val currencySymbols = Currency.getAvailableCurrencies().map { it.symbol }
                     var selectedIndex by remember { mutableIntStateOf(0) }
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         DialogDropdownMenu(
                             modifier = Modifier
-                                .width(120.dp),
-                            items = listOf("$", "#"),
+                                .fillMaxHeight()
+                                .width(125.dp),
+                            items = Currency.getAvailableCurrencies().map { it.symbol },
                             enableTrailingIcon = false,
                             enableLeadingIcon = false,
                             selectedIndex = selectedIndex,
                             onItemSelected = { index, curSymbol ->
                                 selectedIndex = index
-                                //viewerViewModel.setCurrencySymbol(curSymbol)
-                                // TODO - Save currencycode to database
+                                val currencyCode = MediaModel.getCurrencyCode(curSymbol)
+//                                viewerViewModel.setCurrencyCode(currencyCode)
+//                                viewerViewModel.setCurrencySymbol(curSymbol)
+//                                coroutineScope.launch(Dispatchers.IO) {
+//                                    viewerViewModel.updateCurrencyCode(currencyCode)
+//                                }
                             },
-                            itemClicked = {
-
-                            }
+                            onClosed = { /* Do nothing */ }
                         )
                         Button(
                             onClick = {  },
-                            border = BorderStroke(1.dp, Color(0xFF42B1EA)),
+                            border = BorderStroke(2.dp, Color(0xFF42B1EA)),
                             modifier = Modifier
-                                .width(120.dp)
-                                .height(57.dp),
+                                .fillMaxHeight()
+                                .width(125.dp),
                             // border = BorderStroke(width = 2.dp, color = Color(0xFF42B1EA)),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF191D26),
+                                containerColor = Color(0xFF2B2D42),
                                 contentColor = Color(0xFF42B1EA)
                             ),
                             content = {

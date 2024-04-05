@@ -5,6 +5,7 @@ val TextColorPrimary = Color(0xFF9EAEBD)
 val TextColorSecondary = Color(0xFF42B1EA)
 val TsundokuBackground = Color(0xFF13171D)
 val TsundokuBackgroundFade = Color(0xED13171D)
+val AniListPurple = Color(0xFF2B2D42)
 
 val primaryLight = Color(0xFF000000)
 val onPrimaryLight = Color(0xFFFFFFFF)

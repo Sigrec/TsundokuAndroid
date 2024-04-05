@@ -1,6 +1,7 @@
 package com.tsundoku.models
 
 import android.icu.util.Currency
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import com.tsundoku.GetMediaEntryQuery
 import com.tsundoku.data.TsundokuFormat
@@ -108,7 +109,12 @@ class MediaModel {
          * Get the currency code based on its currency symbol
          * @param currencySymbol THe symbol used to get the code
          */
-        fun getCurrencyCode(currencySymbol: String): String = Currency.getInstance(currencySymbol).currencyCode
+        fun getCurrencyCode(currencySymbol: String): String {
+            Log.d("TEST", "Currency Symbol = $currencySymbol")
+            val currency = Currency.getAvailableCurrencies().find { it.symbol == currencySymbol }
+            return if (currency != null) currency.currencyCode
+            else "USD"
+        }
     }
 }
 

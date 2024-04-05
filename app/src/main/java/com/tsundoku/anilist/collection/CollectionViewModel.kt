@@ -1,6 +1,5 @@
 package com.tsundoku.anilist.collection
 
-import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
@@ -116,7 +115,6 @@ class CollectionViewModel @Inject constructor(
                 }
             }
             else {
-                Log.d("TEST", "RESETTING COLLECTION")
                 collection
             }
     }

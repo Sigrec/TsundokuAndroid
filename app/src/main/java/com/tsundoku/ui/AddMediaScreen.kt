@@ -70,15 +70,14 @@ fun AddMediaScreen(
     var cost: String by rememberSaveable { mutableStateOf("") }
     var isAddButtonEnabled: Boolean by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-
+    // TODO - Fix issue where adding a series to colleciton automatically sets it to READING
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF13171D))
-            .padding(20.dp, 20.dp, 20.dp, 10.dp),
+            .padding(20.dp, 100.dp, 20.dp, 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // TODO - Some Bug unable to enter title
         TextField(
             value = title,
             onValueChange = {

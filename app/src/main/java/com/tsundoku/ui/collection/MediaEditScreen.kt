@@ -102,7 +102,6 @@ fun MediaEditScreen(
                 fontFamily = interFont
             )
         }
-        // TODO - Fix padding issue, needs to be centered
         Text(
             text = item.title,
             modifier = Modifier.height(IntrinsicSize.Min),
@@ -247,7 +246,6 @@ fun MediaEditScreen(
                             }
                         }
 
-                        // TODO - Add increment/decrements for overall stats
                         val maxVolumesInt = item.maxVolumes.value.toInt()
                         val curVolumesInt = item.curVolumes.value.toInt()
                         if(curVolumes.toInt() != curVolumesInt) {
@@ -350,7 +348,6 @@ fun MediaEditScreenPreview() {
                 modifier = Modifier.size(40.dp),
                 tint = Color(0xFF777A9E)
             )
-            // TODO - Need to add a little padding top align vertically
             Text(
                 text = "Manga",
                 modifier = Modifier

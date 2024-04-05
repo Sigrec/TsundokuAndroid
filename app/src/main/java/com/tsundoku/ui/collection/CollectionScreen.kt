@@ -161,9 +161,10 @@ suspend fun instantiateDatabaseUser(viewerViewModel: ViewerViewModel) {
     val viewerId = viewerViewModel.getViewerId()
     val currencyCode = viewerViewModel.getDatabaseCurrencyCode(viewerId)
     if (currencyCode != null) {
-        Log.d("Supabase", "Getting User $viewerId Currency Code")
+        val symbol = MediaModel.getCurrencySymbol(currencyCode)
+        Log.i("Supabase", "Getting User $viewerId Currency Code $currencyCode & Symbol $symbol")
         viewerViewModel.setCurrencyCode(currencyCode)
-        viewerViewModel.setCurrencySymbol(MediaModel.getCurrencySymbol(currencyCode))
+        viewerViewModel.setCurrencySymbol(symbol)
     } else {
         Log.d("Supabase", "Added new Viewer $viewerId to Database")
         viewerViewModel.insertDatabaseViewer(viewerId)
@@ -194,7 +195,6 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                         it.mediaId == entry!!.mediaListEntry.media!!.id.toString()
                     }.findAny().get()
                     cost = cost.plus(dbMedia.cost)
-                    Log.d("TEST", "Cur Volume for ${dbMedia.mediaId} = ${dbMedia.curVolumes}")
                     volumes += dbMedia.curVolumes
                     chapters += entry!!.mediaListEntry.media!!.chapters ?: 0
                     collection.add(MediaModel.parseAniListMedia(entry.mediaListEntry.media!!, dbMedia))

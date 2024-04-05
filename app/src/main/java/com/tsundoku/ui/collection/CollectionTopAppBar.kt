@@ -196,7 +196,7 @@ fun FilterCollectionWidget(
                         selectedIndex = index
                         collectionViewModel.updateFilter(TsundokuFilter.parse(curFilter))
                     },
-                    itemClicked = {
+                    onClosed = {
                         if (collectionViewModel.filter.value != TsundokuFilter.NONE) collectionViewModel.updateFilter(
                             TsundokuFilter.NONE)
                         collectionViewModel.toggleFilteringState()

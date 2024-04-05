@@ -1,12 +1,15 @@
 package com.tsundoku
 
+import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -14,6 +17,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.annotation.Destination
@@ -23,8 +30,10 @@ import com.ramcosta.composedestinations.navigation.dependency
 import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.enums.Lang
 import com.tsundoku.anilist.viewer.ViewerViewModel
+import com.tsundoku.data.NetworkResource
 import com.tsundoku.destinations.AddMediaScreenDestination
 import com.tsundoku.destinations.CollectionScreenDestination
+import com.tsundoku.extensions.firstBlocking
 import com.tsundoku.models.ViewerModel
 import com.tsundoku.ui.BottomNavigationBar
 import com.tsundoku.ui.LoginScreen
@@ -40,15 +49,17 @@ class Launch : ComponentActivity() {
     private val collectionViewModel: CollectionViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         // TODO - Apply MaterialTheme and use Generator for colors???
         setContent {
             AppTheme (
                 darkTheme = true
             ) {
+                (LocalContext.current as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 DisposableEffect(true) {
+                    Log.d("TEST", "Disposing $APP_NAME")
                     onDispose {
                         runBlocking {
                             ViewerModel.batchUpdateMediaVolumeCount(viewerViewModel, collectionViewModel)
@@ -56,20 +67,21 @@ class Launch : ComponentActivity() {
                         Log.i("Tsundoku", "Closing Tsundoku Android App")
                     }
                 }
+                LaunchedEffect(Unit) {
+                    viewerViewModel.setIsLoading(true)
+                    viewerViewModel.turnOffAppBar()
+                }
 
                 val navController = rememberNavController()
                 collectionViewModel.onViewer(true)
                 Scaffold(
                     bottomBar = { if (viewerViewModel.showBottomAppBar.value) BottomNavigationBar(viewerViewModel, navController) },
                     topBar = { if (viewerViewModel.showTopAppBar.value) CollectionTopAppBar(viewerViewModel, collectionViewModel) },
+                    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)
                 ) {
-                    LaunchedEffect(Unit) {
-                        viewerViewModel.setIsLoading(true)
-                        viewerViewModel.turnOffAppBar()
-                    }
                     DestinationsNavHost(
                         navGraph = NavGraphs.root,
-                        modifier = androidx.compose.ui.Modifier.padding(it),
+                        modifier = Modifier.padding(it),
                         navController = navController,
                         dependenciesContainerBuilder = {
                             dependency(CollectionScreenDestination) { collectionViewModel }
@@ -88,8 +100,6 @@ class Launch : ComponentActivity() {
     }
 }
 
-// TODO - Disable rotation
-// TODO - Issue where login screen is showing when it shouldn't on initial launch
 @Destination("launch")
 @RootNavGraph(start = true)
 @Composable
@@ -97,41 +107,41 @@ fun LaunchPane(
     viewerViewModel: ViewerViewModel,
     navigator: DestinationsNavigator
 ) {
+    val isLoggedIn by viewerViewModel.isLoggedIn.collectAsStateWithLifecycle(viewerViewModel.isLoggedIn.firstBlocking())
+    when {
+        isLoggedIn -> {
+            if (viewerViewModel.isLoading.value) LoadingScreen()
+            val viewer by viewerViewModel.aniListViewer.collectAsState()
+            when (viewer) {
+                is NetworkResource.Success -> {
+                    viewer.data!!.run viewer@ {
+                        viewerViewModel.setViewerData(this@viewer)
+                        Log.d("AniList","${this@viewer.name} | ${this@viewer.id} | ${this@viewer.avatar!!.medium} | ${this@viewer.bannerImage} | https://anilist.co/user/${this@viewer.id}"
+                        )
+                        viewerViewModel.setViewerId(this@viewer.id)
+                        viewerViewModel.setPreferredLang(Lang.valueOf(this@viewer.options!!.titleLanguage!!.name))
+                        val customLists by viewerViewModel.getViewerCustomLists(this.id).collectAsState()
+                        customLists.data?.customLists?.run customList@ {
+                            val customListsOutput = StringBuilder(this@customList.toString().trim())
 
-//    var isLoggedIn = false
-//    runBlocking {
-//        viewerViewModel.isLoggedIn.collect{
-//            isLoggedIn = it
-//        }
-//    }
-    val isLoggedIn by viewerViewModel.isLoggedIn.collectAsState(initial = false)
-    Log.d("Tsundoku", "User ${if(isLoggedIn) "is" else "is not"} logged in")
-    if(isLoggedIn) {
-        if (viewerViewModel.isLoading.value) LoadingScreen()
-        val viewer by viewerViewModel.aniListViewer.collectAsState()
-        if (viewer.data != null) {
-            viewerViewModel.setViewerData(viewer.data!!)
-            Log.d("ANILIST","${viewer.data!!.name} | ${viewer.data!!.id} | ${viewer.data!!.avatar!!.medium} | ${viewer.data!!.bannerImage} | https://anilist.co/user/${viewer.data!!.id}"
-            )
-            viewerViewModel.setViewerId(viewer.data!!.id)
-            viewerViewModel.setPreferredLang(Lang.valueOf(viewer.data!!.options!!.titleLanguage!!.name))
-            val customLists by viewerViewModel.getViewerCustomLists(viewer.data!!.id).collectAsState()
-            customLists.data?.customLists?.run {
-                val customListsOutput = StringBuilder(this.toString().trim())
-
-                // Check to see if the user already has the "Tsundoku" custom list where collection information for this story will be returned
-                if (customListsOutput.contains("Tsundoku=")) {
-                    Log.d("AniList", "Found Tsundoku List for \"${viewer.data!!.name}\"")
-                } else {
-                    Log.d("AniList", "Creating Tsundoku Custom List for \"${viewer.data!!.name}\"")
-                    viewerViewModel.addTsundokuList(ViewerModel.parseCustomLists(customListsOutput))
+                            // Check to see if the user already has the "Tsundoku" custom list where collection information for this story will be returned
+                            if (customListsOutput.contains("Tsundoku=")) {
+                                Log.d("AniList", "Found Tsundoku List for \"${this@viewer.name}\"")
+                            } else {
+                                Log.d("AniList", "Creating Tsundoku Custom List for \"${this@viewer.name}\"")
+                                viewerViewModel.addTsundokuList(ViewerModel.parseCustomLists(customListsOutput))
+                            }
+                        }
+                        navigator.navigate(CollectionScreenDestination)
+                    }
                 }
+                is NetworkResource.Error -> Log.e("AniList", "Viewer Query returned no data")
+                is NetworkResource.Loading -> Log.d("Tsundoku", "Loading Viewer Data")
             }
-            navigator.navigate(CollectionScreenDestination)
         }
-        else {
-            Log.d("AniList", "Viewer Query returned no data")
+        else -> {
+            Log.d("Tsundoku", "Returning to Login Screen")
+            LoginScreen()
         }
     }
-    else LoginScreen()
 }

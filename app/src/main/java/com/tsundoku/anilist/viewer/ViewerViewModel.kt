@@ -265,6 +265,7 @@ class ViewerViewModel @Inject constructor(
     }
 
     suspend fun updateCurrencyCode(currencyCode: String) {
+        Log.d("Supabase", "Updating currency code for ${_viewerState.value.viewerId} to $currencyCode")
         viewerRepo.updateCurrencyCode(_viewerState.value.viewerId, currencyCode)
     }
 

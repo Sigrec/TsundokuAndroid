@@ -144,7 +144,7 @@ class ViewerRepositoryImpl @Inject constructor(
             }
         ) {
             filter {
-                eq("viewerId", viewerId)
+                eq("id", viewerId)
             }
         }
     }
