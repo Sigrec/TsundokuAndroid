@@ -105,6 +105,10 @@ fun SwipeMediaCardContainer(
                                 viewerViewModel.deleteAniListMediaFromCollection(item.mediaId.toInt(), list)
                             }
                             collectionViewModel.deleteItemFromTsundokuCollection(item)
+                            viewerViewModel.decreaseChapterCount(item.chapters)
+                            viewerViewModel.decrementSeriesCount()
+                            viewerViewModel.decreaseVolumesCount(item.curVolumes.value.toInt())
+                            viewerViewModel.decreaseCollectionCost(item.cost)
                         }
                         is NetworkResource.Loading -> { Log.d("Tsundoku", "Loading Custom Lists for Media ${item.mediaId}") }
                         else -> Log.e("Tsundoku", "Getting Custom Lists for Media ${item.mediaId} Failed")
@@ -258,6 +262,7 @@ fun MediaCard(
                             if (item.curVolumes.value.isNotBlank() && item.curVolumes.value != "0") {
                                 item.curVolumes.value = (item.curVolumes.value.toInt() - 1).toString()
                                 viewerViewModel.addUpdatedCollectionItem(item.mediaId)
+                                viewerViewModel.decreaseVolumesCount(1)
                             }
                         },
                     ) {
@@ -323,6 +328,7 @@ fun MediaCard(
                             if (item.curVolumes.value != item.maxVolumes.value) {
                                 item.curVolumes.value = (item.curVolumes.value.toInt() + 1).toString()
                                 viewerViewModel.addUpdatedCollectionItem(item.mediaId)
+                                viewerViewModel.increaseVolumeCount(1)
                             }
                         },
                     ) {

@@ -30,6 +30,7 @@ interface ViewerRepository {
     suspend fun getDatabaseViewerCurrencyCode(viewerId: Int): Viewer?
     suspend fun insertDatabaseViewer(viewerId: Int)
     suspend fun insertNewMedia(mediaList: List<Media>)
+    suspend fun updateCurrencyCode(viewerId: Int, currencyCode: String)
     suspend fun getMediaList(viewerId: Int): List<Media>
     suspend fun updateMedia(viewerId: Int, mediaId: String, updateMap: Map<String, Any?>)
     suspend fun deleteMedia(viewerId: Int, deleteList: List<String>)

@@ -32,6 +32,7 @@ import com.tsundoku.models.ViewerModel
 import com.tsundoku.ui.loading.LoadingIndicator
 import com.tsundoku.ui.loading.LoadingScreen
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 @Destination(route = "collection")
 @Composable
@@ -54,36 +55,38 @@ fun CollectionScreen(
     val searchingState by collectionViewModel.searchingState
     val filteringState by collectionViewModel.filteringState
 
-    Surface (
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF13171D),
-    ) {
-        // Set state functionality for filtering
-        // TODO - Srcollstate not saved when filtering then coming back
-        // TODO - Multiple reload when opening edit media pane
-        LazyColumn(
-            modifier = Modifier
-                .padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
-            verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    if (viewerViewModel.selectedItemIndex.intValue > -1) {
+        if (viewerViewModel.showTopAppBar.value) viewerViewModel.turnOffTopAppBar()
+        MediaEditScreen(item = tsundokuCollection[viewerViewModel.selectedItemIndex.intValue], coroutineScope = rememberCoroutineScope(), viewerViewModel = viewerViewModel)
+    }
+    else {
+        Surface (
+            modifier = Modifier.fillMaxSize(),
+            color = Color(0xFF13171D),
         ) {
-            if (collectionUiState.onViewer) {
-                Log.d(APP_NAME, "Showing Viewer Collection")
-                itemsIndexed(tsundokuCollection, key = { _, item -> item.mediaId }) { _, item ->
-                    SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
+            // Set state functionality for filtering
+            // TODO - Srcollstate not saved when filtering then coming back
+            // TODO - Multiple reload when opening edit media pane
+            LazyColumn(
+                modifier = Modifier
+                    .padding(0.dp, if(searchingState || filteringState) TSUNDOKU_COLLECTION_CARD_GAP else 0.dp, 0.dp, 10.dp),
+                verticalArrangement = Arrangement.spacedBy(TSUNDOKU_COLLECTION_CARD_GAP),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (collectionUiState.onViewer) {
+                    Log.d(APP_NAME, "Showing Viewer Collection")
+                    itemsIndexed(tsundokuCollection, key = { _, item -> item.mediaId }) { _, item ->
+                        SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
+                    }
                 }
-            }
-            else {
-                Log.d(APP_NAME, "Showing Another Users Collection")
-                items(tsundokuCollection, key = { item -> item.mediaId }) { item ->
-                    MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current)
+                else {
+                    Log.d(APP_NAME, "Showing Another Users Collection")
+                    items(tsundokuCollection, key = { item -> item.mediaId }) { item ->
+                        MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current)
+                    }
                 }
             }
         }
-    }
-
-    if (viewerViewModel.selectedItemIndex.intValue > -1) {
-        MediaEditScreen(item = tsundokuCollection[viewerViewModel.selectedItemIndex.intValue], coroutineScope = rememberCoroutineScope(), viewerViewModel = viewerViewModel)
     }
 
     if (viewerViewModel.isLoading.value){
@@ -181,13 +184,20 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 val aniListEntries = response.data[0]!!.entries!!
                 updateDatabaseMediaList(viewerId, aniListEntries, viewerViewModel)
                 val viewerDatabaseMediaList = viewerViewModel.getDatabaseMediaList(viewerId)
+                var cost = BigDecimal(0.00).setScale(2, RoundingMode.HALF_UP)
+                var volumes = 0
+                var chapters = 0
 
                 // Add AniList Entries
                 aniListEntries.forEach { entry ->
                     val dbMedia = viewerDatabaseMediaList.parallelStream().filter {
                         it.mediaId == entry!!.mediaListEntry.media!!.id.toString()
                     }.findAny().get()
-                    collection.add(MediaModel.parseAniListMedia(entry!!.mediaListEntry.media!!, dbMedia))
+                    cost = cost.plus(dbMedia.cost)
+                    Log.d("TEST", "Cur Volume for ${dbMedia.mediaId} = ${dbMedia.curVolumes}")
+                    volumes += dbMedia.curVolumes
+                    chapters += entry!!.mediaListEntry.media!!.chapters ?: 0
+                    collection.add(MediaModel.parseAniListMedia(entry.mediaListEntry.media!!, dbMedia))
                 }
 
                 // Add MangaDex Entries
@@ -195,10 +205,13 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 // collectionViewModel.sortTsundokuCollection() enable if adding MangaDex
                 if (collectionViewModel.isRefreshing.value) collectionViewModel.setIsRefreshing(false)
                 if (viewerViewModel.isLoading.value) {
-                    Log.d(APP_NAME, "TURNING OFF APP BAR")
                     viewerViewModel.turnOnAppBar()
                     viewerViewModel.setIsLoading(false)
                 }
+                viewerViewModel.setSeriesCount(aniListEntries.size)
+                viewerViewModel.setCollectionCost(cost)
+                viewerViewModel.setVolumeCount(volumes)
+                viewerViewModel.setChapterCount(chapters)
             }
             is NetworkResource.Loading -> {
                 Log.i(APP_NAME, "Loading Tsundoku Collection")

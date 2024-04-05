@@ -72,10 +72,10 @@ fun LoginScreen() {
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
                     .width(20.dp),
-                 border = BorderStroke(width = 2.dp, color = Color(0xFF42B1EA)),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF191D26),
-                contentColor = Color(0xFF42B1EA)
+                border = BorderStroke(width = 2.dp, color = Color(0xFF42B1EA)),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF191D26),
+                    contentColor = Color(0xFF42B1EA)
             ),
                 shape = RoundedCornerShape(8),
                 elevation =  ButtonDefaults.buttonElevation(

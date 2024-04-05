@@ -100,9 +100,15 @@ class MediaModel {
 
         /**
          * Get the currency symbol based on its currency code
-         * @param currencyCode THe code to used to get the symbol
+         * @param currencyCode The code used to get the symbol
          */
         fun getCurrencySymbol(currencyCode: String): String = Currency.getInstance(currencyCode).symbol
+
+        /**
+         * Get the currency code based on its currency symbol
+         * @param currencySymbol THe symbol used to get the code
+         */
+        fun getCurrencyCode(currencySymbol: String): String = Currency.getInstance(currencySymbol).currencyCode
     }
 }
 

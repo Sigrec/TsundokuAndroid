@@ -110,6 +110,7 @@ fun LaunchPane(
         if (viewerViewModel.isLoading.value) LoadingScreen()
         val viewer by viewerViewModel.aniListViewer.collectAsState()
         if (viewer.data != null) {
+            viewerViewModel.setViewerData(viewer.data!!)
             Log.d("ANILIST","${viewer.data!!.name} | ${viewer.data!!.id} | ${viewer.data!!.avatar!!.medium} | ${viewer.data!!.bannerImage} | https://anilist.co/user/${viewer.data!!.id}"
             )
             viewerViewModel.setViewerId(viewer.data!!.id)

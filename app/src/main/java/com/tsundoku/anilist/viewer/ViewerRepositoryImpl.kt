@@ -137,6 +137,18 @@ class ViewerRepositoryImpl @Inject constructor(
         supabase.from(DATABASE_MEDIA_TABLE).insert(mediaList)
     }
 
+    override suspend fun updateCurrencyCode(viewerId: Int, currencyCode: String) {
+        supabase.from(DATABASE_VIEWER_TABLE).update(
+            {
+                set("currency", currencyCode)
+            }
+        ) {
+            filter {
+                eq("viewerId", viewerId)
+            }
+        }
+    }
+
     override suspend fun getMediaList(viewerId: Int): List<Media> {
         return supabase.from(DATABASE_MEDIA_TABLE).select(columns = Columns.list("mediaId", "curVolumes", "maxVolumes", "cost")) {
             filter {
@@ -150,7 +162,7 @@ class ViewerRepositoryImpl @Inject constructor(
             {
                 if(updateMap["curVolumes"] != null) set("curVolumes", updateMap["curVolumes"].toString().toInt())
                 if(updateMap["maxVolumes"] != null) set("maxVolumes", updateMap["maxVolumes"].toString().toInt())
-                if(updateMap["cost"] != null) set("cost", updateMap["cost"].toString().toBigDecimal())
+                if(updateMap["cost"] != null) set("cost", updateMap["cost"].toString())
                 if(updateMap["notes"] != null) set("notes", updateMap["notes"].toString().ifBlank { null })
             }
         ) {

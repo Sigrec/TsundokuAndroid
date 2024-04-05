@@ -78,11 +78,12 @@ fun AddMediaScreen(
             .padding(20.dp, 20.dp, 20.dp, 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // TODO - Some Bug unable to enter title
         TextField(
             value = title,
             onValueChange = {
                 title = it
-                isAddButtonEnabled = it.isNotEmpty()
+                isAddButtonEnabled = isAddSeriesButtonEnabled(title, curVolumes, maxVolumes)
             },
             label = {
                 Text(
@@ -122,7 +123,7 @@ fun AddMediaScreen(
                 ) },
             onValueChange = {
                 if (it.isEmpty() || (it.length <= 25 && MediaModel.costRegex.matches(it))) cost = it
-                isAddButtonEnabled = it.isNotBlank()
+                // isAddButtonEnabled = isAddSeriesButtonEnabled(title, curVolumes, maxVolumes)
              },
             label = {
                 Text(
@@ -157,9 +158,9 @@ fun AddMediaScreen(
                 value = curVolumes,
                 onValueChange = {
                     if (MediaModel.volumeNumRegex.matches(it)) curVolumes = it
-                    isAddButtonEnabled = if (it.isNotBlank() && maxVolumes.isNotBlank()) (it.toInt() <= maxVolumes.toInt()) else false
+                    isAddButtonEnabled = isAddSeriesButtonEnabled(title, curVolumes, maxVolumes)
                 },
-                label = { Text("Cur Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
+                label = { Text("Cur Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold, fontFamily = interFont) },
                 modifier = Modifier
                     .height(60.dp)
                     .weight(1f),
@@ -183,9 +184,9 @@ fun AddMediaScreen(
                 value = maxVolumes,
                 onValueChange = {
                     if (MediaModel.volumeNumRegex.matches(it)) maxVolumes = it
-                    isAddButtonEnabled = if(it.isNotBlank() && curVolumes.isNotBlank()) (it.toInt() >= curVolumes.toInt()) else false
+                    isAddButtonEnabled = isAddSeriesButtonEnabled(title, curVolumes, maxVolumes)
                 },
-                label = { Text("Max Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
+                label = { Text("Max Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold, fontFamily = interFont) },
                 modifier = Modifier
                     .height(60.dp)
                     .weight(1f),
@@ -344,6 +345,10 @@ fun AddMediaScreen(
                                                         item?.mediaId?.toInt()?.let { itItem ->
                                                             viewerViewModel.addAniListMediaToCollection(itItem, ViewerModel.parseTrueCustomLists(StringBuilder(getList.data.customLists.toString().trim())))
                                                         }
+                                                        viewerViewModel.increaseChapterCount(item!!.chapters)
+                                                        viewerViewModel.incrementSeriesCount()
+                                                        viewerViewModel.increaseVolumeCount(item!!.curVolumes.value.toInt())
+                                                        viewerViewModel.increaseCollectionCost(item!!.cost)
                                                     }
                                                     else -> {
                                                         Log.d("Tsundoku", "Custom Lists Empty for ${item!!.mediaId}")
@@ -409,7 +414,10 @@ fun AddMediaScreen(
                 title = ""
                 showSuccessToast = false
             }
-            else title = ""
+            // else title = ""
         }
     }
 }
+
+fun isAddSeriesButtonEnabled(curTitle: String, curCurVolumes: String, curMaxVolumes: String) = curTitle.isNotBlank() && curCurVolumes.isNotBlank() && curMaxVolumes.isNotBlank() && (curCurVolumes.toInt() <= curMaxVolumes.toInt()) && (curMaxVolumes.toInt() >= curCurVolumes.toInt())
+// curTitle.isNotBlank() && (if (curCurVolumes.isNotBlank() && curMaxVolumes.isNotBlank()) (curCurVolumes.toInt() <= curMaxVolumes.toInt()) else false) && (if (curMaxVolumes.isNotBlank() && curVolumes.isNotBlank()) (it.toInt() >= curVolumes.toInt()) else false)

@@ -12,6 +12,7 @@ const val TSUNDOKU_SCHEME = "tsundoku"
 const val TSUNDOKU_DEFAULT_CURRENCY_CODE = "USD"
 const val TSUNDOKU_DEFAULT_CURRENCY_SYMBOL = "$"
 val TSUNDOKU_COLLECTION_CARD_GAP = 15.dp
+val TSUNDOKU_BUTTON_CORNER_ROUNDING = 8.dp
 
 // AniList
 const val ANILIST_URL = "https://anilist.co"

@@ -90,7 +90,6 @@ fun MediaEditScreen(
                 modifier = Modifier.size(40.dp),
                 tint = Color(0xFF777A9E)
             )
-            // TODO - Need to add a little padding top align vertically
             Text(
                 text = "${item.format} | ${item.status}",
                 modifier = Modifier
@@ -119,9 +118,9 @@ fun MediaEditScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             OutlinedTextField(
-                value = item.curVolumes.value,
+                value = curVolumes,
                 onValueChange = {
-                    if (MediaModel.volumeNumRegex.matches(it)) item.curVolumes.value = it
+                    if (MediaModel.volumeNumRegex.matches(it)) curVolumes = it
                     saveEnabled = !(it.isBlank() || item.maxVolumes.value.isBlank() || it.toInt() > item.maxVolumes.value.toInt())
                 },
                 label = { Text("Cur Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
@@ -145,9 +144,9 @@ fun MediaEditScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
             OutlinedTextField(
-                value = item.maxVolumes.value,
+                value = maxVolumes,
                 onValueChange = {
-                    if (MediaModel.volumeNumRegex.matches(it)) item.maxVolumes.value = it
+                    if (MediaModel.volumeNumRegex.matches(it)) maxVolumes = it
                     saveEnabled = !(it.isBlank() || item.curVolumes.value.isBlank() || it.toInt() < item.curVolumes.value.toInt())
                 },
                 label = { Text("Max Volumes", color = Color(0xFFC8C9E4), fontWeight = FontWeight.ExtraBold) },
@@ -248,13 +247,15 @@ fun MediaEditScreen(
                             }
                         }
 
+                        // TODO - Add increment/decrements for overall stats
                         val maxVolumesInt = item.maxVolumes.value.toInt()
                         val curVolumesInt = item.curVolumes.value.toInt()
                         if(curVolumes.toInt() != curVolumesInt) {
                             if (curVolumesInt <= maxVolumesInt) {
                                 Log.d("Supabase", "Updating Cur Volumes for ${item.title}")
-                                item.curVolumes.value = curVolumesInt.toString()
-                                updateMap["curVolumes"] = curVolumesInt
+                                viewerViewModel.increaseVolumeCount(curVolumes.toInt() - curVolumesInt)
+                                item.curVolumes.value = curVolumes
+                                updateMap["curVolumes"] = curVolumes
                             } else {
                                 Toast.makeText(context, "Cur Volumes > Max Volumes", Toast.LENGTH_SHORT).show()
                             }
@@ -262,8 +263,8 @@ fun MediaEditScreen(
                         if(maxVolumes.toInt() != maxVolumesInt) {
                             if (maxVolumesInt >= curVolumesInt) {
                                 Log.d("Supabase", "Updating Max Volumes for ${item.title}")
-                                item.maxVolumes.value = maxVolumesInt.toString()
-                                updateMap["maxVolumes"] = maxVolumesInt
+                                item.maxVolumes.value = maxVolumes
+                                updateMap["maxVolumes"] = maxVolumes
                             } else {
                                 Toast.makeText(context, "Max Volumes < Cur Volumes", Toast.LENGTH_SHORT).show()
                             }
@@ -271,11 +272,13 @@ fun MediaEditScreen(
 
                         if(item.cost != cost.toBigDecimal()) {
                             Log.d("Supabase", "Updating Cost for ${item.title}")
+                            viewerViewModel.increaseCollectionCost(cost.toBigDecimal().minus(item.cost))
                             item.cost = cost.toBigDecimal()
                             updateMap["cost"] = cost
                         }
 
                         if (updateMap.isNotEmpty()) {
+                            Log.d("Supabase", "Updating $updateMap")
                             viewerViewModel.updateDatabaseMedia(viewerViewModel.getViewerId(), item.mediaId, updateMap)
                         }
                     }

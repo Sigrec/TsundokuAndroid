@@ -12,6 +12,7 @@ import com.tsundoku.APP_NAME
 import com.tsundoku.GetCustomListsQuery
 import com.tsundoku.GetMediaCustomListsQuery
 import com.tsundoku.TSUNDOKU_SCHEME
+import com.tsundoku.ViewerQuery
 import com.tsundoku.anilist.enums.Lang
 import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
 import com.tsundoku.data.NetworkResource
@@ -26,9 +27,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import javax.inject.Inject
 
 /**
@@ -40,8 +43,28 @@ class ViewerViewModel @Inject constructor(
     private val preferencesRepo: PreferencesRepositoryImpl,
 ) : ViewModel() {
 
-    private val _viewerState = mutableStateOf(ViewerState())
-    val viewerState: ViewerState = _viewerState.value
+    private val _viewerState = MutableStateFlow(ViewerState())
+    val viewerState: StateFlow<ViewerState> = _viewerState.asStateFlow()
+
+    // Series Count
+    fun incrementSeriesCount() = _viewerState.value.seriesCount++
+    fun decrementSeriesCount() = _viewerState.value.seriesCount--
+    fun setSeriesCount(count: Int) { _viewerState.value.seriesCount = count }
+
+    // Collection Cost/Value
+    fun setCollectionCost(value: BigDecimal) { _viewerState.value.collectionCost = value }
+    fun decreaseCollectionCost(value: BigDecimal) { _viewerState.value.collectionCost = _viewerState.value.collectionCost.minus(value) }
+    fun increaseCollectionCost(value: BigDecimal) { _viewerState.value.collectionCost = _viewerState.value.collectionCost.plus(value) }
+
+    // Chapters
+    fun setChapterCount(count: Int) { _viewerState.value.chapters = count }
+    fun decreaseChapterCount(count: Int) { _viewerState.value.chapters -= count}
+    fun increaseChapterCount(count: Int) { _viewerState.value.chapters += count}
+
+    // Volumes
+    fun setVolumeCount(count: Int) { _viewerState.value.volumes = count }
+    fun decreaseVolumesCount(count: Int) { _viewerState.value.volumes -= count}
+    fun increaseVolumeCount(count: Int) { _viewerState.value.volumes += count}
 
     // Items that had there volume count updated in the collection screen
     private val _updatedCollectionItems: MutableStateFlow<MutableList<String>> = MutableStateFlow(mutableListOf())
@@ -50,6 +73,10 @@ class ViewerViewModel @Inject constructor(
         if (!_updatedCollectionItems.value.parallelStream().anyMatch { it == mediaId }) {
             _updatedCollectionItems.value.add(mediaId)
         }
+    }
+
+    fun setViewerData(viewer: ViewerQuery.Viewer) {
+        _viewerState.value.viewer = viewer
     }
 
     val isLoading: MutableState<Boolean> = mutableStateOf(false)
@@ -111,7 +138,7 @@ class ViewerViewModel @Inject constructor(
      * Gets the authenticated users custom lists for a specific media
      */
     fun getMediaCustomLists(mediaId: Int): StateFlow<NetworkResource<GetMediaCustomListsQuery.MediaList>> {
-        return viewerRepo.getMediaCustomLists(viewerState.viewerId, mediaId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+        return viewerRepo.getMediaCustomLists(viewerState.value.viewerId, mediaId).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
     }
 
     /**
@@ -235,6 +262,10 @@ class ViewerViewModel @Inject constructor(
      */
     suspend fun insertNewDatabaseMedia(mediaList: List<Media>) {
         viewerRepo.insertNewMedia(mediaList)
+    }
+
+    suspend fun updateCurrencyCode(currencyCode: String) {
+        viewerRepo.updateCurrencyCode(_viewerState.value.viewerId, currencyCode)
     }
 
     /**
