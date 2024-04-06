@@ -91,7 +91,6 @@ fun SwipeMediaCardContainer(
         }
     )
 
-    // TODO - Fix issue where private media doesn't get deleted properly?
     LaunchedEffect(key1 = isRemoved) {
         if (isRemoved) {
             delay(Duration.ofMillis(animationDuration.toLong()))

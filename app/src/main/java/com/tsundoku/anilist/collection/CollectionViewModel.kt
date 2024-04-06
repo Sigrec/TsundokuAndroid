@@ -134,7 +134,7 @@ class CollectionViewModel @Inject constructor(
         if (_tsundokuCollection.value.size == 0) {
             _tsundokuCollection.value.add(item)
         }
-        else {
+        else if(!_tsundokuCollection.value.any { it.mediaId == item.mediaId }){
             val index = _tsundokuCollection.value.binarySearch(item, compareBy { it.title })
             _tsundokuCollection.value.add(if(index < 0) index.inv() else index, item)
         }

@@ -30,7 +30,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,13 +63,13 @@ fun AddMediaScreen(
     collectionViewModel: CollectionViewModel,
 ) {
     if (viewerViewModel.showTopAppBar.value) viewerViewModel.turnOffTopAppBar()
-    var title: String by rememberSaveable { mutableStateOf("") }
-    var curVolumes: String by rememberSaveable { mutableStateOf("") }
-    var maxVolumes: String by rememberSaveable { mutableStateOf("") }
-    var cost: String by rememberSaveable { mutableStateOf("") }
-    var isAddButtonEnabled: Boolean by rememberSaveable { mutableStateOf(false) }
+    var title: String by remember { mutableStateOf("") }
+    var curVolumes: String by remember { mutableStateOf("") }
+    var maxVolumes: String by remember { mutableStateOf("") }
+    var cost: String by remember { mutableStateOf("") }
+    var isAddButtonEnabled: Boolean by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    // TODO - Fix issue where adding a series to colleciton automatically sets it to READING
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -318,55 +317,51 @@ fun AddMediaScreen(
 
                         coroutineScope.launch(Dispatchers.IO) {
                             var item: TsundokuItem?
-                            viewerViewModel.getNewAniListMediaSeries(seriesId = aniListId, title = if(aniListId == null) title else null, format = format).collect { it ->
-                                when(it) {
+                            viewerViewModel.getNewAniListMediaSeries(seriesId = aniListId, title = if(aniListId == null) title else null, format = format).collect { newMedia ->
+                                when(newMedia) {
                                     is NetworkResource.Success -> {
-                                        item = MediaModel.parseAniListMedia(it.data, curVolumesInt, maxVolumesInt, costVal)
+                                        item = MediaModel.parseAniListMedia(newMedia.data, curVolumesInt, maxVolumesInt, costVal)
                                         Log.i("Tsundoku", "Successfully got $item from AniList")
 
                                         if (!collectionViewModel.tsundokuCollection.value.any { curItem -> curItem.mediaId == item!!.mediaId }) {
-                                            // Add to database
-                                            viewerViewModel.insertNewDatabaseMedia(listOf(Media(viewerViewModel.getViewerId(), item!!.mediaId, curVolumesInt, maxVolumesInt, costVal)))
-
                                             // Add to list
                                             collectionViewModel.addItemToTsundokuCollection(item!!)
+
+                                            // Add to database
+                                            viewerViewModel.insertNewDatabaseMedia(listOf(Media(viewerViewModel.getViewerId(), item!!.mediaId, curVolumesInt, maxVolumesInt, costVal)))
 
                                             // Reset text fields to empty
                                             curVolumes = ""
                                             maxVolumes = ""
                                             cost = ""
 
-                                            // Add to AniList custom list
-                                            viewerViewModel.getMediaCustomLists(it.data.id).collect { getList ->
-                                                when(getList) {
-                                                    is NetworkResource.Success -> {
-                                                        Log.d("Tsundoku", "Custom Lists for ${item!!.mediaId} is ${ViewerModel.parseTrueCustomLists(StringBuilder(getList.data.customLists.toString().trim()))}")
-                                                        item?.mediaId?.toInt()?.let { itItem ->
-                                                            viewerViewModel.addAniListMediaToCollection(itItem, ViewerModel.parseTrueCustomLists(StringBuilder(getList.data.customLists.toString().trim())))
-                                                        }
-                                                        viewerViewModel.increaseChapterCount(item!!.chapters)
-                                                        viewerViewModel.incrementSeriesCount()
-                                                        viewerViewModel.increaseVolumeCount(item!!.curVolumes.value.toInt())
-                                                        viewerViewModel.increaseCollectionCost(item!!.cost)
-                                                    }
-                                                    else -> {
-                                                        Log.d("Tsundoku", "Custom Lists Empty for ${item!!.mediaId}")
-                                                        item?.mediaId?.toInt()?.let { itItem ->
-                                                            viewerViewModel.addAniListMediaToCollection(itItem,  mutableListOf())
-                                                        }
-                                                    }
+                                            newMedia.data.mediaListEntry?.run mediaListEntry@ {
+                                                if (this.customLists != null) {
+                                                    val mediaCustomLists = ViewerModel.parseTrueCustomLists(StringBuilder(this@mediaListEntry.customLists.toString().trim()))
+                                                    Log.d(APP_NAME, "Custom Lists for ${item!!.mediaId} is $mediaCustomLists")
+                                                    viewerViewModel.addAniListMediaToCollection(item!!.mediaId.toInt(), mediaCustomLists, this@mediaListEntry.status)
                                                 }
-                                                showSuccessToast = true
+                                                else {
+                                                    Log.d("Tsundoku", "Custom Lists Empty for ${item!!.mediaId}")
+                                                    viewerViewModel.addAniListMediaToCollection(item!!.mediaId.toInt(), mutableListOf(), this@mediaListEntry.status)
+                                                }
                                             }
+
+                                            viewerViewModel.increaseChapterCount(item!!.chapters)
+                                            viewerViewModel.incrementSeriesCount()
+                                            viewerViewModel.increaseVolumeCount(item!!.curVolumes.value.toInt())
+                                            viewerViewModel.increaseCollectionCost(item!!.cost)
+
+                                            showSuccessToast = true
                                         } else {
+                                            Log.w(APP_NAME, "Media \"${item!!.title} ${item!!.mediaId}\" Already Exists in Collection")
                                             openAlreadyExistsDialog = true
-                                            Log.w("Tsundoku", "\"$title\" Already Exists in Collection")
                                         }
                                     }
                                     is NetworkResource.Loading -> {  }
                                     else -> {
+                                        Log.e(APP_NAME, "Media \"$title\" Does not Exist in AniList or Mangadex")
                                         openTryAgainDialog = true
-                                        Log.w(APP_NAME, "\"$title\" Does not Exist in AniList or Mangadex")
                                     }
                                 }
                             }
@@ -398,6 +393,7 @@ fun AddMediaScreen(
                 )
             }
             else if(openAlreadyExistsDialog) {
+                Log.w("TEST", "Media \"$title\" Already Exists in Collection")
                 AlertDialog(
                     dialogTitle = "Already Added!",
                     dialogText = "\"$title\"",
@@ -413,7 +409,6 @@ fun AddMediaScreen(
                 title = ""
                 showSuccessToast = false
             }
-            // else title = ""
         }
     }
 }

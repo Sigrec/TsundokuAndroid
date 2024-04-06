@@ -12,6 +12,7 @@ import com.tsundoku.data.TsundokuFormat
 import com.tsundoku.models.Media
 import com.tsundoku.models.Viewer
 import com.tsundoku.models.VolumeUpdateMedia
+import com.tsundoku.type.MediaListStatus
 import kotlinx.coroutines.flow.Flow
 
 interface ViewerRepository {
@@ -19,7 +20,7 @@ interface ViewerRepository {
     fun getViewerCustomLists(userId: Int): Flow<Result<GetCustomListsQuery.MediaList>>
     fun addTsundokuList(customLists: MutableList<String>): Flow<Result<AddTsundokuListMutation.UpdateUser>>
     fun updateAniListMediaNotes(mediaId: Int, newNote: String): Flow<Result<UpdateMediaNotesMutation.SaveMediaListEntry>>
-    fun addAniListMediaToCollection(mediaId: Int, customLists: List<String>): Flow<Result<AddMediaToTsundokuMutation.SaveMediaListEntry>>
+    fun addAniListMediaToCollection(mediaId: Int, customLists: List<String>, status: MediaListStatus?): Flow<Result<AddMediaToTsundokuMutation.SaveMediaListEntry>>
     fun deleteAniListMediaFromCollection(mediaId: Int, customLists: List<String>): Flow<Result<DeleteMediaFromTsundokuMutation.SaveMediaListEntry>>
     fun getMediaCustomLists(viewerId: Int, mediaId: Int): Flow<Result<GetMediaCustomListsQuery.MediaList>>
     fun getNewAniListMediaSeries(

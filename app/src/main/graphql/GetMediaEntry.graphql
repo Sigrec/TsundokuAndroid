@@ -13,8 +13,11 @@ query GetMediaEntry($seriesId: Int, $title: String, $type: MediaFormat!) {
             userPreferred
         }
         mediaListEntry {
-            private
+            customLists(asArray: true)
+            hiddenFromStatusLists
             notes
+            score(format: POINT_10_DECIMAL)
+            status
         }
     }
 }

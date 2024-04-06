@@ -25,8 +25,9 @@ fragment mediaListEntry on MediaList {
             userPreferred
         }
         mediaListEntry {
-            private
+            hiddenFromStatusLists
             notes
+            score(format: POINT_10_DECIMAL)
         }
     }
 }

@@ -190,10 +190,12 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 var chapters = 0
 
                 // Add AniList Entries
-                aniListEntries.forEach { entry ->
+                for (entry in aniListEntries) {
+                    Log.d("TEST", "${entry!!.mediaListEntry.media!!.mediaListEntry?.score}")
                     val dbMedia = viewerDatabaseMediaList.parallelStream().filter {
                         it.mediaId == entry!!.mediaListEntry.media!!.id.toString()
                     }.findAny().get()
+
                     cost = cost.plus(dbMedia.cost)
                     volumes += dbMedia.curVolumes
                     chapters += entry!!.mediaListEntry.media!!.chapters ?: 0

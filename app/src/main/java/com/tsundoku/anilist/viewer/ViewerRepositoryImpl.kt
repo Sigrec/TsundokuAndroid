@@ -23,6 +23,7 @@ import com.tsundoku.models.Media
 import com.tsundoku.models.Viewer
 import com.tsundoku.models.VolumeUpdateMedia
 import com.tsundoku.type.MediaFormat
+import com.tsundoku.type.MediaListStatus
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
@@ -59,11 +60,14 @@ class ViewerRepositoryImpl @Inject constructor(
      * @param viewerId The authenticated users AniList ID
      * @param mediaId The unique id of the media to update
      */
-    override fun getMediaCustomLists(viewerId: Int, mediaId: Int) = aniListClient
-        .query(GetMediaCustomListsQuery(viewerId = viewerId, mediaId = mediaId))
-        .fetchPolicy(FetchPolicy.CacheAndNetwork)
-        .toFlow()
-        .asResult { it.MediaList!! }
+    override fun getMediaCustomLists(viewerId: Int, mediaId: Int): Flow<Result<GetMediaCustomListsQuery.MediaList>> {
+        Log.d("AniList", "Getting custom lists for Media $mediaId on Viewer $viewerId")
+        return authAniListClient
+            .query(GetMediaCustomListsQuery(viewerId = viewerId, mediaId = mediaId))
+            .fetchPolicy(FetchPolicy.CacheAndNetwork)
+            .toFlow()
+            .asResult { it.MediaList!! }
+    }
 
     /**
      * Adds "Tsundoku" custom list to the authenticated users "custom lists"
@@ -99,9 +103,9 @@ class ViewerRepositoryImpl @Inject constructor(
      * Adds a AniList media to "Tsundoku" custom list in AniList
      * @param mediaId The unique AniList media ID for the series
      */
-    override fun addAniListMediaToCollection(mediaId: Int, customLists: List<String>): Flow<Result<AddMediaToTsundokuMutation.SaveMediaListEntry>> {
+    override fun addAniListMediaToCollection(mediaId: Int, customLists: List<String>, status: MediaListStatus?): Flow<Result<AddMediaToTsundokuMutation.SaveMediaListEntry>> {
         return authAniListClient
-            .mutation(AddMediaToTsundokuMutation(mediaId = mediaId, customLists = customLists))
+            .mutation(AddMediaToTsundokuMutation(mediaId = mediaId, customLists = customLists, status = Optional.presentIfNotNull(status)))
             .fetchPolicy(FetchPolicy.NetworkOnly)
             .toFlow()
             .asResult { it.SaveMediaListEntry!! }
@@ -138,6 +142,7 @@ class ViewerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateCurrencyCode(viewerId: Int, currencyCode: String) {
+        Log.d("Supabase", "Updating currency code for $viewerId to $currencyCode")
         supabase.from(DATABASE_VIEWER_TABLE).update(
             {
                 set("currency", currencyCode)
@@ -158,6 +163,7 @@ class ViewerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateMedia(viewerId: Int, mediaId: String, updateMap: Map<String, Any?>) {
+        Log.d("Supabase", "$viewerId Updating $updateMap for Media $mediaId")
         supabase.from(DATABASE_MEDIA_TABLE).update(
             {
                 if(updateMap["curVolumes"] != null) set("curVolumes", updateMap["curVolumes"].toString().toInt())
@@ -174,7 +180,7 @@ class ViewerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun batchCurVolumesUpdateMedia(viewerId: Int, updateList: MutableList<VolumeUpdateMedia>) {
-        Log.d("Tsundoku", "Batch Updating $updateList for Viewer $viewerId")
+        Log.d("Supabase", "Batch Updating $updateList for Viewer $viewerId")
         supabase.from(DATABASE_MEDIA_TABLE).upsert(updateList) {
             filter {
                 eq("viewerId", viewerId)
@@ -183,7 +189,7 @@ class ViewerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteMedia(viewerId: Int, deleteList: List<String>) {
-        Log.d("Supabase", "Deleting $deleteList for Viewer $viewerId")
+        Log.d("Supabase", "Deleting $deleteList Media(s) for Viewer $viewerId")
         supabase.from(DATABASE_MEDIA_TABLE).delete {
             filter {
                 eq("viewerId", viewerId)

@@ -22,6 +22,7 @@ import com.tsundoku.models.Media
 import com.tsundoku.models.ViewerModel
 import com.tsundoku.models.ViewerState
 import com.tsundoku.models.VolumeUpdateMedia
+import com.tsundoku.type.MediaListStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -190,11 +191,11 @@ class ViewerViewModel @Inject constructor(
      * Adds a AniList media to "Tsundoku" custom list in AniList
      * @param mediaId The unique AniList media ID for the series
      */
-    fun addAniListMediaToCollection(mediaId: Int, customLists: MutableList<String>) {
+    fun addAniListMediaToCollection(mediaId: Int, customLists: MutableList<String>, status: MediaListStatus?) {
         viewModelScope.launch(Dispatchers.IO) {
             customLists.add(APP_NAME)
             Log.d("TEST", "CUSTOM LISTS 1 = ${ViewerModel.parseTrueCustomLists(StringBuilder(customLists.toString().trim()))}")
-            viewerRepo.addAniListMediaToCollection(mediaId = mediaId, customLists = customLists)
+            viewerRepo.addAniListMediaToCollection(mediaId = mediaId, customLists = customLists, status = status)
             .collect {
                 if(it.isSuccess) {
                     Log.i(APP_NAME, "Successfully Added Media $mediaId To Collection")
@@ -265,7 +266,6 @@ class ViewerViewModel @Inject constructor(
     }
 
     suspend fun updateCurrencyCode(currencyCode: String) {
-        Log.d("Supabase", "Updating currency code for ${_viewerState.value.viewerId} to $currencyCode")
         viewerRepo.updateCurrencyCode(_viewerState.value.viewerId, currencyCode)
     }
 
