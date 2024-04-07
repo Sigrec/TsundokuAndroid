@@ -25,6 +25,7 @@ import com.tsundoku.TSUNDOKU_COLLECTION_CARD_GAP
 import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.NetworkResource
+import com.tsundoku.data.TsundokuStatus
 import com.tsundoku.models.Media
 import com.tsundoku.models.MediaModel
 import com.tsundoku.models.TsundokuItem
@@ -188,18 +189,31 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 var cost = BigDecimal(0.00).setScale(2, RoundingMode.HALF_UP)
                 var volumes = 0
                 var chapters = 0
+                var finishedCount = 0f
+                var ongoingCount = 0f
+                var cancelledCount = 0f
+                var hiatusCount = 0f
+                var comingSoonCount = 0f
 
                 // Add AniList Entries
                 for (entry in aniListEntries) {
-                    Log.d("TEST", "${entry!!.mediaListEntry.media!!.mediaListEntry?.score}")
                     val dbMedia = viewerDatabaseMediaList.parallelStream().filter {
                         it.mediaId == entry!!.mediaListEntry.media!!.id.toString()
                     }.findAny().get()
 
+                    val item = MediaModel.parseAniListMedia(entry!!.mediaListEntry.media!!, dbMedia)
                     cost = cost.plus(dbMedia.cost)
                     volumes += dbMedia.curVolumes
-                    chapters += entry!!.mediaListEntry.media!!.chapters ?: 0
-                    collection.add(MediaModel.parseAniListMedia(entry.mediaListEntry.media!!, dbMedia))
+                    chapters += item.chapters
+                    when(item.status) {
+                        TsundokuStatus.FINISHED -> finishedCount++
+                        TsundokuStatus.ONGOING -> ongoingCount++
+                        TsundokuStatus.CANCELLED -> cancelledCount++
+                        TsundokuStatus.HIATUS -> hiatusCount++
+                        TsundokuStatus.COMING_SOON -> comingSoonCount++
+                        TsundokuStatus.ERROR -> Log.e(APP_NAME, "Error with Item Status ${item.status} for [${item.title} ${item.mediaId}]")
+                    }
+                    collection.add(item)
                 }
 
                 // Add MangaDex Entries
@@ -214,6 +228,7 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 viewerViewModel.setCollectionCost(cost)
                 viewerViewModel.setVolumeCount(volumes)
                 viewerViewModel.setChapterCount(chapters)
+                viewerViewModel.setStatusData(finishedCount, ongoingCount, cancelledCount, hiatusCount, comingSoonCount)
             }
             is NetworkResource.Loading -> {
                 Log.i(APP_NAME, "Loading Tsundoku Collection")

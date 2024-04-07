@@ -351,6 +351,7 @@ fun AddMediaScreen(
                                             viewerViewModel.incrementSeriesCount()
                                             viewerViewModel.increaseVolumeCount(item!!.curVolumes.value.toInt())
                                             viewerViewModel.increaseCollectionCost(item!!.cost)
+                                            viewerViewModel.incrementStatusCount(item!!)
 
                                             showSuccessToast = true
                                         } else {

@@ -88,7 +88,7 @@ class MediaModel {
         /**
          * Gets the status of a series converted into
          */
-        fun getMediaStatus(status: String): TsundokuStatus {
+        private fun getMediaStatus(status: String): TsundokuStatus {
             return when (status) {
                 "FINISHED" -> TsundokuStatus.FINISHED
                 "RELEASING" -> TsundokuStatus.ONGOING

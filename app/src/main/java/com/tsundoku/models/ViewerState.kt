@@ -16,5 +16,10 @@ data class ViewerState(
     var collectionCost: BigDecimal = BigDecimal(0.00).setScale(2, RoundingMode.HALF_UP),
     var seriesCount: Int = 0,
     var chapters: Int = 0,
-    var volumes: Int = 0
+    var volumes: Int = 0,
+    var cancelledCount: Float = 0f,
+    var hiatusCount: Float = 0f,
+    var ongoingCount: Float = 0f,
+    var finishedCount: Float = 0f,
+    var comingSoonCount: Float = 0f,
 )

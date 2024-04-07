@@ -108,6 +108,7 @@ fun SwipeMediaCardContainer(
                             viewerViewModel.decrementSeriesCount()
                             viewerViewModel.decreaseVolumesCount(item.curVolumes.value.toInt())
                             viewerViewModel.decreaseCollectionCost(item.cost)
+                            viewerViewModel.decrementStatusCount(item)
                         }
                         is NetworkResource.Loading -> { Log.d("Tsundoku", "Loading Custom Lists for Media ${item.mediaId}") }
                         else -> Log.e("Tsundoku", "Getting Custom Lists for Media ${item.mediaId} Failed")

@@ -112,6 +112,9 @@ dependencies {
     implementation(libs.ramamcosta.compose.destinations.core)
     ksp(libs.ramamcosta.compose.destinations.ksp)
 
+    // Chart Library
+    implementation(libs.dauto.charts)
+
     testImplementation(libs.junit)
 
     androidTestImplementation(libs.androidx.junit)

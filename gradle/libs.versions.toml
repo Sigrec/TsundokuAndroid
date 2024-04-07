@@ -23,6 +23,7 @@ coil = "2.6.0"
 supabase = "2.2.2"
 ktor = "2.3.9"
 lifecycleRuntimeCompose = "2.7.0"
+charts = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -75,6 +76,7 @@ postgres-kt = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" 
 ktor = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleRuntimeCompose" }
 
+dauto-charts = { group = "com.github.dautovicharis", name = "Charts", version.ref = "charts" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

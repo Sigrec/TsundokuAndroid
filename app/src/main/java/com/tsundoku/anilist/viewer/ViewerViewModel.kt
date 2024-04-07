@@ -18,7 +18,9 @@ import com.tsundoku.anilist.preferences.PreferencesRepositoryImpl
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
 import com.tsundoku.data.TsundokuFormat
+import com.tsundoku.data.TsundokuStatus
 import com.tsundoku.models.Media
+import com.tsundoku.models.TsundokuItem
 import com.tsundoku.models.ViewerModel
 import com.tsundoku.models.ViewerState
 import com.tsundoku.models.VolumeUpdateMedia
@@ -67,7 +69,45 @@ class ViewerViewModel @Inject constructor(
     fun decreaseVolumesCount(count: Int) { _viewerState.value.volumes -= count}
     fun increaseVolumeCount(count: Int) { _viewerState.value.volumes += count}
 
-    // Items that had there volume count updated in the collection screen
+    // Status [finished, ongoing, cancelled, hiatus, coming soon]
+    /**
+     * Gets the status data for the viewer as a list in the order of [finished, ongoing, cancelled, hiatus, coming soon]
+     */
+    fun getStatusData(): List<Float> {
+        return listOf(_viewerState.value.finishedCount, _viewerState.value.ongoingCount, _viewerState.value.cancelledCount, _viewerState.value.hiatusCount, _viewerState.value.comingSoonCount)
+    }
+    fun setStatusData(finishedCount: Float? = null, ongoingCount: Float? = null, cancelledCount: Float? = null, hiatusCount: Float? = null, comingSoonCount: Float? = null) {
+        if (finishedCount != null && finishedCount >= 0) _viewerState.value.finishedCount = finishedCount
+        if (ongoingCount != null && ongoingCount >= 0) _viewerState.value.ongoingCount = ongoingCount
+        if (cancelledCount != null && cancelledCount >= 0) _viewerState.value.cancelledCount = cancelledCount
+        if (hiatusCount != null && hiatusCount >= 0) _viewerState.value.hiatusCount = hiatusCount
+        if (comingSoonCount != null && comingSoonCount >= 0) _viewerState.value.comingSoonCount = comingSoonCount
+    }
+    fun incrementStatusCount(item: TsundokuItem) {
+        when(item.status) {
+            TsundokuStatus.FINISHED -> _viewerState.value.finishedCount++
+            TsundokuStatus.ONGOING -> _viewerState.value.ongoingCount++
+            TsundokuStatus.CANCELLED -> _viewerState.value.cancelledCount++
+            TsundokuStatus.HIATUS -> _viewerState.value.hiatusCount++
+            TsundokuStatus.COMING_SOON -> _viewerState.value.comingSoonCount++
+            TsundokuStatus.ERROR -> Log.e(APP_NAME, "Error with Item Status ${item.status} for [${item.title} ${item.mediaId}]")
+        }
+    }
+    fun decrementStatusCount(item: TsundokuItem) {
+        when(item.status) {
+            TsundokuStatus.FINISHED -> _viewerState.value.finishedCount--
+            TsundokuStatus.ONGOING -> _viewerState.value.ongoingCount--
+            TsundokuStatus.CANCELLED -> _viewerState.value.cancelledCount--
+            TsundokuStatus.HIATUS -> _viewerState.value.hiatusCount--
+            TsundokuStatus.COMING_SOON -> _viewerState.value.comingSoonCount--
+            TsundokuStatus.ERROR -> Log.e(APP_NAME, "Error with Item Status ${item.status} for [${item.title} ${item.mediaId}]")
+        }
+    }
+
+    /**
+     * Items that had there volume count updated in the collection screen
+     */
+    // TODO - Create timed function that executes update after a given time
     private val _updatedCollectionItems: MutableStateFlow<MutableList<String>> = MutableStateFlow(mutableListOf())
     val updatedCollectionItems = _updatedCollectionItems
     fun addUpdatedCollectionItem(mediaId: String) {
