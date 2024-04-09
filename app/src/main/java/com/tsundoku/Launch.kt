@@ -1,6 +1,5 @@
 package com.tsundoku
 
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
@@ -33,6 +32,7 @@ import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.destinations.AddMediaScreenDestination
 import com.tsundoku.destinations.CollectionScreenDestination
+import com.tsundoku.extensions.ContextExt.getActivity
 import com.tsundoku.extensions.firstBlocking
 import com.tsundoku.models.ViewerModel
 import com.tsundoku.ui.BottomNavigationBar
@@ -52,24 +52,21 @@ class Launch : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // CookieExt.setup()
+
         // TODO - Apply MaterialTheme and use Generator for colors???
         setContent {
             AppTheme (
                 darkTheme = true
             ) {
-                (LocalContext.current as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                LocalContext.current.getActivity()?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 DisposableEffect(true) {
-                    Log.d("TEST", "Disposing $APP_NAME")
                     onDispose {
                         runBlocking {
                             ViewerModel.batchUpdateMediaVolumeCount(viewerViewModel, collectionViewModel)
                         }
-                        Log.i("Tsundoku", "Closing Tsundoku Android App")
+                        Log.i(APP_NAME, "Closing Tsundoku Android App")
                     }
-                }
-                LaunchedEffect(Unit) {
-                    viewerViewModel.setIsLoading(true)
-                    viewerViewModel.turnOffAppBar()
                 }
 
                 val navController = rememberNavController()
@@ -107,7 +104,13 @@ fun LaunchPane(
     viewerViewModel: ViewerViewModel,
     navigator: DestinationsNavigator
 ) {
+    LaunchedEffect(Unit) {
+        viewerViewModel.setIsLoading(true)
+        viewerViewModel.turnOffAppBar()
+    }
+
     val isLoggedIn by viewerViewModel.isLoggedIn.collectAsStateWithLifecycle(viewerViewModel.isLoggedIn.firstBlocking())
+    Log.d("TEST", "LOGGED IN =? $isLoggedIn")
     when {
         isLoggedIn -> {
             if (viewerViewModel.isLoading.value) LoadingScreen()

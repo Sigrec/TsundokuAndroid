@@ -21,7 +21,7 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setAccessToken(accessToken: String?) = dataStore.setValue(ACCESS_TOKEN_KEY, accessToken)
 
 
-    suspend fun logoutViewer() {
+    suspend fun logOutViewer() {
         dataStore.edit {
             it.remove(ACCESS_TOKEN_KEY)
         }

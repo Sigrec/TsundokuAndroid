@@ -1,10 +1,6 @@
 package com.tsundoku.ui
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,16 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tsundoku.ANILIST_AUTH_URL
 import com.tsundoku.R
-
-fun Context.openActionView(uri: Uri) {
-    try {
-        Intent(Intent.ACTION_VIEW, uri).apply {
-            startActivity(this)
-        }
-    } catch (e: ActivityNotFoundException) {
-        Log.e("ANILIST", "No App Found for this Action")
-    }
-}
+import com.tsundoku.extensions.ContextExt.openActionView
 
 @Composable
 fun LoginScreen() {

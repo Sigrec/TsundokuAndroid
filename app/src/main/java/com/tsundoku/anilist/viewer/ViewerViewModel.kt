@@ -46,8 +46,32 @@ class ViewerViewModel @Inject constructor(
     private val preferencesRepo: PreferencesRepositoryImpl,
 ) : ViewModel() {
 
+    /**
+     * Whether user opening the app has successfully oauth'd
+     */
+    val isLoggedIn = preferencesRepo.accessToken.map { !it.isNullOrEmpty() }
+
+    /**
+     * When the redirect intent returns with the users access token save it datastore
+     * @param data The redirect url containing the access token
+     */
+    fun onTokenDataReceived(data: Uri?) = viewModelScope.launch(Dispatchers.IO) {
+        if (data?.scheme == TSUNDOKU_SCHEME && data.fragment?.startsWith("access_token") == true) {
+            Log.d("AniList", "Fetching User Token")
+            preferencesRepo.setAccessToken(data.fragment!!.substringAfter("access_token=").substringBefore("&token_type"))
+        }
+    }
+
     private val _viewerState = MutableStateFlow(ViewerState())
     val viewerState: StateFlow<ViewerState> = _viewerState.asStateFlow()
+
+    fun logOut(refresh: () -> Unit) {
+        Log.i(APP_NAME, "Logging Viewer ${_viewerState.value.viewerId} Out")
+        viewModelScope.launch {
+            preferencesRepo.logOutViewer()
+            refresh()
+        }
+    }
 
     // Series Count
     fun incrementSeriesCount() = _viewerState.value.seriesCount++
@@ -157,11 +181,6 @@ class ViewerViewModel @Inject constructor(
     }
 
     /**
-     * Whether user opening the app has successfully oauth'd
-     */
-    val isLoggedIn = preferencesRepo.accessToken.map { !it.isNullOrEmpty() }
-
-    /**
      * Authenticated users information, represented as a viewer in AniList GraphQL
      */
     val aniListViewer = viewerRepo.getAniListViewer().asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
@@ -183,7 +202,7 @@ class ViewerViewModel @Inject constructor(
     }
 
     /**
-     * Adds the "Tsundoku" custom list to the logged in users AniList profile
+     * Adds the APP_NAME custom list to the logged in users AniList profile
      */
     fun addTsundokuList(customLists: List<String>) {
         viewModelScope.launch {
@@ -195,17 +214,6 @@ class ViewerViewModel @Inject constructor(
                     Log.e("ANILIST", "Adding Tsundoku Custom List Failed")
                 }
             }
-        }
-    }
-
-    /**
-     * When the redirect intent returns with the users access token save it datastore
-     * @param data The redirect url containing the access token
-     */
-    fun onTokenDataReceived(data: Uri?) = viewModelScope.launch(Dispatchers.IO) {
-        if (data?.scheme == TSUNDOKU_SCHEME && data.fragment?.startsWith("access_token") == true) {
-            Log.d("AniList", "Fetching User Token")
-            preferencesRepo.setAccessToken(data.fragment!!.substringAfter("access_token=").substringBefore("&token_type"))
         }
     }
 
@@ -228,7 +236,7 @@ class ViewerViewModel @Inject constructor(
     }
 
     /**
-     * Adds a AniList media to "Tsundoku" custom list in AniList
+     * Adds a AniList media to APP_NAME custom list in AniList
      * @param mediaId The unique AniList media ID for the series
      */
     fun addAniListMediaToCollection(mediaId: Int, customLists: MutableList<String>, status: MediaListStatus?) {
@@ -249,7 +257,7 @@ class ViewerViewModel @Inject constructor(
     }
 
     /**
-     * Deletes a AniList media series from the authenticated users "Tsundoku" custom list in AniList
+     * Deletes a AniList media series from the authenticated users APP_NAME custom list in AniList
      * @param mediaId The unique AniList media ID for the series
      * @param customLists The users current list of custom lists to not override others
      */

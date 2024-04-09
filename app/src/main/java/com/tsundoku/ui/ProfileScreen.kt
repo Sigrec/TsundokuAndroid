@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,16 +15,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -47,23 +55,43 @@ import com.hd.charts.common.model.ChartDataSet
 import com.hd.charts.style.ChartViewDefaults
 import com.hd.charts.style.PieChartDefaults
 import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.tsundoku.anilist.viewer.ViewerViewModel
+import com.tsundoku.destinations.LaunchPaneDestination
+import com.tsundoku.extensions.CookiesExt
 import com.tsundoku.interFont
 import com.tsundoku.models.MediaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Currency
 
+
 @Destination(route = "profile")
 @Composable
 fun ProfileScreen(
     viewerViewModel: ViewerViewModel,
+    navigator: DestinationsNavigator
 ) {
-    LaunchedEffect(Unit) {
-        viewerViewModel.turnOffTopAppBar()
-    }
+    LaunchedEffect(Unit) { viewerViewModel.turnOffTopAppBar() }
     val viewerState by viewerViewModel.viewerState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var openLoggingOut: Boolean by remember { mutableStateOf(false) }
+
+    if (openLoggingOut) {
+        LogOutDialog(
+            confirm = {
+                openLoggingOut = false
+                viewerViewModel.logOut {
+                    CookiesExt.removeCookie()
+                    navigator.navigate(LaunchPaneDestination)
+                }
+            },
+            dismiss = {
+                openLoggingOut = false;
+            }
+        )
+    }
 
     // TODO - Add pie chart and functionality
     // TODO - Add logout functionality
@@ -75,7 +103,7 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .zIndex(3f)
-                .offset(y = (-180).dp),
+                .offset(y = (-190).dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ){
@@ -84,8 +112,8 @@ fun ProfileScreen(
                     .fillMaxWidth(0.33f)
                     .fillMaxHeight(0.16f)
                     .clip(RoundedCornerShape(21.dp))
-                    .border(2.dp, Color(0xFF42B1EA), RoundedCornerShape(21.dp)),
-                model = ImageRequest.Builder(LocalContext.current)
+                    .border(3.dp, Color(0xFF42B1EA), RoundedCornerShape(21.dp)),
+                model = ImageRequest.Builder(context)
                     .data(viewerState.viewer?.avatar?.medium)
                     .crossfade(true)
                     .build(),
@@ -221,7 +249,6 @@ fun ProfileScreen(
                             },
                         )
                         Button(
-                            onClick = {  },
                             border = BorderStroke(2.dp, Color(0xFF42B1EA)),
                             modifier = Modifier
                                 .fillMaxHeight()
@@ -241,13 +268,82 @@ fun ProfileScreen(
                                     maxLines = 1,
                                     softWrap = false,
                                 )
-                            }
+                            },
+                            onClick = {
+                                openLoggingOut = true
+                            },
                         )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun LogOutDialog(
+    confirm: () -> Unit,
+    dismiss: () -> Unit
+)
+{
+    androidx.compose.material3.AlertDialog(
+        icon = {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = "Alert Icon",
+                modifier = Modifier.size(40.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Log Out?",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
+                    .wrapContentSize(Alignment.Center),
+                fontFamily = interFont,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 30.sp
+            )
+        },
+        onDismissRequest = { confirm() },
+        dismissButton = {
+            TextButton(
+                onClick = { confirm() },
+                colors = ButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color(0xFF42B1EA),
+                    disabledContainerColor = Color.Transparent,
+                    disabledContentColor = Color.Transparent
+                )
+            ) {
+                Text(
+                    "Confirm",
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { dismiss() },
+                colors = ButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color(0xFF42B1EA),
+                    disabledContainerColor = Color.Transparent,
+                    disabledContentColor = Color.Transparent
+                )
+            ) {
+                Text(
+                    "Dismiss",
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        },
+        containerColor = Color(0xF2393B51),
+        textContentColor = Color(0xFF42B1EA),
+        iconContentColor = Color(0xFF42B1EA),
+        titleContentColor = Color(0xFF9EAEBD)
+    )
 }
 
 @Composable
@@ -330,10 +426,13 @@ private fun ChartLegend(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Box(
-            modifier = Modifier.size(20.dp).clip(RectangleShape).background(color)
+            modifier = Modifier
+                .size(20.dp)
+                .clip(RectangleShape)
+                .background(color)
         )
         Text(
             text = "$title (${value.toInt()})",
@@ -350,29 +449,32 @@ private fun ChartLegend(
 @Preview
 @Composable
 fun ProfilePreview() {
-    // pieColors = listOf(Color(0xFF42B1EA), Color(0xFF6CCDFF), Color(0xFF84D5FF), Color(0xFFB2E5FF), Color(0xFF9BD4F1))
-    Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ChartLegend("Finished", 3.0f, Color(0xFF42B1EA))
-            ChartLegend("Ongoing", 3.0f, Color(0xFF6CCDFF))
-            ChartLegend("Cancelled", 3.0f, Color(0xFF84D5FF))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ChartLegend("Hiatus", 3.0f, Color(0xFFB2E5FF))
-            ChartLegend("Coming Soon", 3.0f, Color(0xFF9BD4F1))
-        }
+    LogOutDialog(confirm = { /*TODO*/ }) {
+        
     }
+    // pieColors = listOf(Color(0xFF42B1EA), Color(0xFF6CCDFF), Color(0xFF84D5FF), Color(0xFFB2E5FF), Color(0xFF9BD4F1))
+//    Column(
+//        verticalArrangement = Arrangement.spacedBy(10.dp),
+//        horizontalAlignment = Alignment.CenterHorizontally
+//    ) {
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.SpaceAround,
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            ChartLegend("Finished", 3.0f, Color(0xFF42B1EA))
+//            ChartLegend("Ongoing", 3.0f, Color(0xFF6CCDFF))
+//            ChartLegend("Cancelled", 3.0f, Color(0xFF84D5FF))
+//        }
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.SpaceAround,
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            ChartLegend("Hiatus", 3.0f, Color(0xFFB2E5FF))
+//            ChartLegend("Coming Soon", 3.0f, Color(0xFF9BD4F1))
+//        }
+//    }
 //    Box(
 //        modifier = Modifier
 //            .fillMaxSize(),

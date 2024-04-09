@@ -67,7 +67,7 @@ fun AlertDialog(
                 )
             }
         },
-        containerColor = Color(0xCC393B51),
+        containerColor = Color(0xD9393B51),
         textContentColor = Color(0xFF42B1EA),
         iconContentColor = Color(0xFF42B1EA),
         titleContentColor = Color(0xFF9EAEBD)

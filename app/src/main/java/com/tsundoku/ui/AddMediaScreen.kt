@@ -1,8 +1,6 @@
 package com.tsundoku.ui
 
 import android.util.Log
-import android.view.Gravity
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +44,7 @@ import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.TsundokuFormat
+import com.tsundoku.extensions.ContextExt.showToast
 import com.tsundoku.interFont
 import com.tsundoku.models.Media
 import com.tsundoku.models.MediaModel
@@ -404,9 +403,7 @@ fun AddMediaScreen(
                 )
             }
             else if(showSuccessToast) {
-                val toast = Toast.makeText(context, "\"$title\" Added", Toast.LENGTH_SHORT)
-                toast.setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, 0)
-                toast.show()
+                context.showToast("\"$title\" Added")
                 title = ""
                 showSuccessToast = false
             }
