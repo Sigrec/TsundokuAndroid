@@ -21,7 +21,6 @@ import com.tsundoku.data.TsundokuFormat
 import com.tsundoku.data.TsundokuStatus
 import com.tsundoku.models.Media
 import com.tsundoku.models.TsundokuItem
-import com.tsundoku.models.ViewerModel
 import com.tsundoku.models.ViewerState
 import com.tsundoku.models.VolumeUpdateMedia
 import com.tsundoku.type.MediaListStatus
@@ -33,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import javax.inject.Inject
@@ -64,6 +64,7 @@ class ViewerViewModel @Inject constructor(
 
     private val _viewerState = MutableStateFlow(ViewerState())
     val viewerState: StateFlow<ViewerState> = _viewerState.asStateFlow()
+    fun setSelectedScreenIndex(index: Int) = _viewerState.update { it.copy(selectedScreenIndex = index ) }
 
     fun logOut(refresh: () -> Unit) {
         Log.i(APP_NAME, "Logging Viewer ${_viewerState.value.viewerId} Out")
@@ -148,6 +149,10 @@ class ViewerViewModel @Inject constructor(
     fun setIsLoading(new: Boolean) { isLoading.value = new }
 
     val selectedItemIndex: MutableIntState = mutableIntStateOf(-1)
+    /**
+     * Sets the index for the current media that the viewer wants to edit so it opens the composable only if the current collection is the viewer's collection
+     * @param index The current index of the media
+     */
     fun setSelectedItemIndex(index: Int) { selectedItemIndex.intValue = index }
 
     fun setViewerId(id: Int) { _viewerState.value.viewerId = id }
@@ -242,7 +247,6 @@ class ViewerViewModel @Inject constructor(
     fun addAniListMediaToCollection(mediaId: Int, customLists: MutableList<String>, status: MediaListStatus?) {
         viewModelScope.launch(Dispatchers.IO) {
             customLists.add(APP_NAME)
-            Log.d("TEST", "CUSTOM LISTS 1 = ${ViewerModel.parseTrueCustomLists(StringBuilder(customLists.toString().trim()))}")
             viewerRepo.addAniListMediaToCollection(mediaId = mediaId, customLists = customLists, status = status)
             .collect {
                 if(it.isSuccess) {

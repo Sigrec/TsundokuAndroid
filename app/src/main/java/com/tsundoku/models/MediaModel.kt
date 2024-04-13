@@ -110,7 +110,6 @@ class MediaModel {
          * @param currencySymbol THe symbol used to get the code
          */
         fun getCurrencyCode(currencySymbol: String): String {
-            Log.d("TEST", "Currency Symbol = $currencySymbol")
             val currency = Currency.getAvailableCurrencies().find { it.symbol == currencySymbol }
             return if (currency != null) currency.currencyCode
             else "USD"

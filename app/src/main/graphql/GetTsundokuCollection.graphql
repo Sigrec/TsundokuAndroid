@@ -23,6 +23,9 @@ fragment mediaListEntry on MediaList {
         }
         title {
             userPreferred
+            romaji
+            english
+            native
         }
         mediaListEntry {
             hiddenFromStatusLists

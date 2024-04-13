@@ -50,7 +50,7 @@ class ViewerRepositoryImpl @Inject constructor(
      * Gets the current "custom lists" for the authenticated user
      */
     override fun getViewerCustomLists(userId: Int) = aniListClient
-            .query(GetCustomListsQuery(userId = userId))
+            .query(GetCustomListsQuery(userId = Optional.present(userId), username = Optional.absent()))
             .fetchPolicy(FetchPolicy.CacheAndNetwork)
             .toFlow()
             .asResult { it.MediaList!! }

@@ -89,7 +89,8 @@ fun CollectionDefaultTopAppBar(
             IconButton(onClick = {
                 coroutineScope.launch(Dispatchers.IO) {
                     collectionViewModel.setIsRefreshing(true)
-                    fetchTsundokuCollection(viewerViewModel, collectionViewModel)
+                    collectionViewModel.onViewer(true)
+                    fetchTsundokuCollection(viewerViewModel, collectionViewModel, collectionViewModel.collectionUiState.value)
                 }
             }) {
                 Icon(

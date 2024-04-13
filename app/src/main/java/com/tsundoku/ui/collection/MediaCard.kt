@@ -224,7 +224,7 @@ fun MediaCard(
                     modifier = Modifier
                         //.offset(y = (-4).dp)
                         .clickable {
-                            if (viewerViewModel.selectedItemIndex.intValue == -1) {
+                            if (collectionUiState.onViewer && collectionUiState.curEditingMediaIndex == -1) {
                                 viewerViewModel.turnOffTopAppBar()
                                 viewerViewModel.setSelectedItemIndex(collectionViewModel.getTsundokuItemIndex(item))
                             }
@@ -259,7 +259,7 @@ fun MediaCard(
                             .height(35.dp)
                             .width(35.dp),
                         onClick = {
-                            if (item.curVolumes.value.isNotBlank() && item.curVolumes.value != "0") {
+                            if (collectionUiState.onViewer && item.curVolumes.value.isNotBlank() && item.curVolumes.value != "0") {
                                 item.curVolumes.value = (item.curVolumes.value.toInt() - 1).toString()
                                 viewerViewModel.addUpdatedCollectionItem(item.mediaId)
                                 viewerViewModel.decreaseVolumesCount(1)
@@ -325,7 +325,7 @@ fun MediaCard(
                             .height(35.dp)
                             .width(35.dp),
                         onClick = {
-                            if (item.curVolumes.value != item.maxVolumes.value) {
+                            if (collectionUiState.onViewer && item.curVolumes.value != item.maxVolumes.value) {
                                 item.curVolumes.value = (item.curVolumes.value.toInt() + 1).toString()
                                 viewerViewModel.addUpdatedCollectionItem(item.mediaId)
                                 viewerViewModel.increaseVolumeCount(1)

@@ -26,10 +26,12 @@ import com.tsundoku.anilist.collection.CollectionViewModel
 import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.TsundokuStatus
+import com.tsundoku.models.CollectionUiState
 import com.tsundoku.models.Media
 import com.tsundoku.models.MediaModel
 import com.tsundoku.models.TsundokuItem
 import com.tsundoku.models.ViewerModel
+import com.tsundoku.type.MediaFormat
 import com.tsundoku.ui.loading.LoadingIndicator
 import com.tsundoku.ui.loading.LoadingScreen
 import java.math.BigDecimal
@@ -39,19 +41,25 @@ import java.math.RoundingMode
 @Composable
 fun CollectionScreen(
     viewerViewModel: ViewerViewModel,
-    collectionViewModel: CollectionViewModel
+    collectionViewModel: CollectionViewModel,
 ) {
-    if (viewerViewModel.isLoading.value) {
+    val collectionUiState by collectionViewModel.collectionUiState.collectAsState()
+    if (viewerViewModel.isLoading.value && collectionUiState.onViewer) {
         LaunchedEffect(Unit) {
-            Log.d("TEST", "Loading Collection")
+            Log.i(APP_NAME, "Loading Viewer Collection")
             instantiateDatabaseUser(viewerViewModel)
-            fetchTsundokuCollection(viewerViewModel, collectionViewModel)
+            fetchTsundokuCollection(viewerViewModel, collectionViewModel, collectionUiState)
+        }
+    }
+    else if (viewerViewModel.isLoading.value && !collectionUiState.onViewer && collectionUiState.successfulUserSearch) {
+        LaunchedEffect(Unit) {
+            Log.i(APP_NAME, "Loading Searched User Collection")
+            fetchTsundokuCollection(viewerViewModel, collectionViewModel, collectionUiState)
         }
     }
 
     if (!viewerViewModel.showTopAppBar.value) viewerViewModel.turnOnTopAppBar()
 
-    val collectionUiState by collectionViewModel.collectionUiState.collectAsState()
     val tsundokuCollection by collectionViewModel.tsundokuCollection.collectAsState()
     val searchingState by collectionViewModel.searchingState
     val filteringState by collectionViewModel.filteringState
@@ -75,13 +83,11 @@ fun CollectionScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (collectionUiState.onViewer) {
-                    Log.d(APP_NAME, "Showing Viewer Collection")
                     itemsIndexed(tsundokuCollection, key = { _, item -> item.mediaId }) { _, item ->
                         SwipeMediaCardContainer(item = item, mediaCard = { MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current) }, viewerViewModel = viewerViewModel, collectionViewModel = collectionViewModel)
                     }
                 }
                 else {
-                    Log.d(APP_NAME, "Showing Another Users Collection")
                     items(tsundokuCollection, key = { item -> item.mediaId }) { item ->
                         MediaCard(item = item, viewerViewModel, collectionViewModel, collectionUiState, LocalUriHandler.current)
                     }
@@ -97,7 +103,7 @@ fun CollectionScreen(
 }
 
 /**
- * Checks the database to see whether the Tsundoku Collection has matching entries in the database for the user, if a media entry is not in the database for the user then we add it
+ * Checks the database to see whether the Tsundoku Collection has matching entries in the database for the viewer (authenticated user), if a media entry is not in the database for the user then we add it
  * @param viewerId Unique id of the authenticated used
  * @param tsundokuCollection The users current Tsundoku Collection from AniList
  */
@@ -107,22 +113,25 @@ suspend fun updateDatabaseMediaList(viewerId: Int, tsundokuCollection: List<GetT
     val deleteList: MutableList<String> = mutableListOf()
     if (curDbMediaList.isEmpty()) {
         tsundokuCollection.forEach {
-            insertList.add(
-                Media(
-                    viewerId,
-                    it!!.mediaListEntry.media!!.id.toString(),
-                    0,
-                    it.mediaListEntry.media!!.volumes ?: 1,
-                    BigDecimal(0.00)
+            val media = it!!.mediaListEntry.media!!
+            if (media.format == MediaFormat.MANGA || media.format == MediaFormat.NOVEL) {
+                insertList.add(
+                    Media(
+                        viewerId,
+                        media.id.toString(),
+                        0,
+                        media.volumes ?: 1,
+                        BigDecimal(0.00)
+                    )
                 )
-            )
+            }
         }
     } else {
         // Check to see if a specific media in the Tsundoku Collection exists in the DB if not add it to be batched
         tsundokuCollection.forEach {
             val curMedia = it!!.mediaListEntry.media!!
             val mediaId = curMedia.id.toString()
-            if (!curDbMediaList.parallelStream().anyMatch { media -> media.mediaId == mediaId }) {
+            if ((curMedia.format == MediaFormat.MANGA || curMedia.format == MediaFormat.NOVEL) && !curDbMediaList.parallelStream().anyMatch { media -> media.mediaId == mediaId }) {
                 insertList.add(
                     Media(
                         viewerId,
@@ -175,17 +184,29 @@ suspend fun instantiateDatabaseUser(viewerViewModel: ViewerViewModel) {
 /**
  * Gets the users tsundoku collection from AniList & Supabase
  */
-suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collectionViewModel: CollectionViewModel) {
+suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collectionViewModel: CollectionViewModel, collectionUiState: CollectionUiState) {
     if (collectionViewModel.isRefreshing.value) ViewerModel.batchUpdateMediaVolumeCount(viewerViewModel, collectionViewModel)
-    val viewerId = viewerViewModel.getViewerId()
-    collectionViewModel.getTsundokuCollection(viewerId, getMediaListSort(viewerViewModel.getPreferredLang().name)).collect { response ->
+
+    var viewerId: Int? = null
+    var username: String? = null
+    val userId: Int
+
+    if (collectionUiState.onViewer) {
+        viewerId = viewerViewModel.getViewerId()
+        userId = viewerId
+    } else {
+        username = collectionUiState.curSearchUser!!.name
+        userId = collectionUiState.curSearchUser.id
+    }
+
+    collectionViewModel.getTsundokuCollection(viewerId = viewerId, username = username, titleSort = getMediaListSort(viewerViewModel.getPreferredLang().name)).collect { response ->
         when (response) {
             is NetworkResource.Success -> {
-                Log.d("Tsundoku", "Instantiating User Collection")
+                Log.d(APP_NAME, "Instantiating User Collection")
                 val collection: MutableList<TsundokuItem> = mutableListOf()
                 val aniListEntries = response.data[0]!!.entries!!
-                updateDatabaseMediaList(viewerId, aniListEntries, viewerViewModel)
-                val viewerDatabaseMediaList = viewerViewModel.getDatabaseMediaList(viewerId)
+                if (collectionUiState.onViewer) updateDatabaseMediaList(userId, aniListEntries, viewerViewModel)
+                val viewerDatabaseMediaList = viewerViewModel.getDatabaseMediaList(userId)
                 var cost = BigDecimal(0.00).setScale(2, RoundingMode.HALF_UP)
                 var volumes = 0
                 var chapters = 0
@@ -195,40 +216,43 @@ suspend fun fetchTsundokuCollection(viewerViewModel: ViewerViewModel, collection
                 var hiatusCount = 0f
                 var comingSoonCount = 0f
 
-                // Add AniList Entries
+                // Add AniList Entries to mutable list
                 for (entry in aniListEntries) {
-                    val dbMedia = viewerDatabaseMediaList.parallelStream().filter {
+                    viewerDatabaseMediaList.find {
                         it.mediaId == entry!!.mediaListEntry.media!!.id.toString()
-                    }.findAny().get()
-
-                    val item = MediaModel.parseAniListMedia(entry!!.mediaListEntry.media!!, dbMedia)
-                    cost = cost.plus(dbMedia.cost)
-                    volumes += dbMedia.curVolumes
-                    chapters += item.chapters
-                    when(item.status) {
-                        TsundokuStatus.FINISHED -> finishedCount++
-                        TsundokuStatus.ONGOING -> ongoingCount++
-                        TsundokuStatus.CANCELLED -> cancelledCount++
-                        TsundokuStatus.HIATUS -> hiatusCount++
-                        TsundokuStatus.COMING_SOON -> comingSoonCount++
-                        TsundokuStatus.ERROR -> Log.e(APP_NAME, "Error with Item Status ${item.status} for [${item.title} ${item.mediaId}]")
+                    }?.run {
+                        val item = MediaModel.parseAniListMedia(entry!!.mediaListEntry.media!!, this)
+                        cost = cost.plus(this.cost)
+                        volumes += this.curVolumes
+                        chapters += item.chapters
+                        when(item.status) {
+                            TsundokuStatus.FINISHED -> finishedCount++
+                            TsundokuStatus.ONGOING -> ongoingCount++
+                            TsundokuStatus.CANCELLED -> cancelledCount++
+                            TsundokuStatus.HIATUS -> hiatusCount++
+                            TsundokuStatus.COMING_SOON -> comingSoonCount++
+                            TsundokuStatus.ERROR -> Log.e(APP_NAME, "Error with Item Status ${item.status} for [${item.title} | ${item.mediaId}]")
+                        }
+                        collection.add(item)
                     }
-                    collection.add(item)
                 }
-
                 // Add MangaDex Entries
+
                 collectionViewModel.setTsundokuCollection(collection)
                 // collectionViewModel.sortTsundokuCollection() enable if adding MangaDex
                 if (collectionViewModel.isRefreshing.value) collectionViewModel.setIsRefreshing(false)
                 if (viewerViewModel.isLoading.value) {
                     viewerViewModel.turnOnAppBar()
                     viewerViewModel.setIsLoading(false)
+                    collectionViewModel.isSuccessfulUserSearch(false)
                 }
-                viewerViewModel.setSeriesCount(aniListEntries.size)
-                viewerViewModel.setCollectionCost(cost)
-                viewerViewModel.setVolumeCount(volumes)
-                viewerViewModel.setChapterCount(chapters)
-                viewerViewModel.setStatusData(finishedCount, ongoingCount, cancelledCount, hiatusCount, comingSoonCount)
+                if (collectionUiState.onViewer) {
+                    viewerViewModel.setSeriesCount(aniListEntries.size)
+                    viewerViewModel.setCollectionCost(cost)
+                    viewerViewModel.setVolumeCount(volumes)
+                    viewerViewModel.setChapterCount(chapters)
+                    viewerViewModel.setStatusData(finishedCount, ongoingCount, cancelledCount, hiatusCount, comingSoonCount)
+                }
             }
             is NetworkResource.Loading -> {
                 Log.i(APP_NAME, "Loading Tsundoku Collection")

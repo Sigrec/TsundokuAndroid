@@ -32,6 +32,7 @@ import com.tsundoku.anilist.viewer.ViewerViewModel
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.destinations.AddMediaScreenDestination
 import com.tsundoku.destinations.CollectionScreenDestination
+import com.tsundoku.destinations.UserSearchScreenDestination
 import com.tsundoku.extensions.ContextExt.getActivity
 import com.tsundoku.extensions.firstBlocking
 import com.tsundoku.models.ViewerModel
@@ -70,7 +71,6 @@ class Launch : ComponentActivity() {
                 }
 
                 val navController = rememberNavController()
-                collectionViewModel.onViewer(true)
                 Scaffold(
                     bottomBar = { if (viewerViewModel.showBottomAppBar.value) BottomNavigationBar(viewerViewModel, navController) },
                     topBar = { if (viewerViewModel.showTopAppBar.value) CollectionTopAppBar(viewerViewModel, collectionViewModel) },
@@ -83,6 +83,7 @@ class Launch : ComponentActivity() {
                         dependenciesContainerBuilder = {
                             dependency(CollectionScreenDestination) { collectionViewModel }
                             dependency(AddMediaScreenDestination) { collectionViewModel }
+                            dependency(UserSearchScreenDestination) { collectionViewModel }
                             dependency(viewerViewModel)
                         }
                     )
@@ -110,7 +111,6 @@ fun LaunchPane(
     }
 
     val isLoggedIn by viewerViewModel.isLoggedIn.collectAsStateWithLifecycle(viewerViewModel.isLoggedIn.firstBlocking())
-    Log.d("TEST", "LOGGED IN =? $isLoggedIn")
     when {
         isLoggedIn -> {
             if (viewerViewModel.isLoading.value) LoadingScreen()
@@ -128,7 +128,7 @@ fun LaunchPane(
                             val customListsOutput = StringBuilder(this@customList.toString().trim())
 
                             // Check to see if the user already has the "Tsundoku" custom list where collection information for this story will be returned
-                            if (customListsOutput.contains("Tsundoku=")) {
+                            if (customListsOutput.contains("$APP_NAME=")) {
                                 Log.d("AniList", "Found Tsundoku List for \"${this@viewer.name}\"")
                             } else {
                                 Log.d("AniList", "Creating Tsundoku Custom List for \"${this@viewer.name}\"")
@@ -139,7 +139,7 @@ fun LaunchPane(
                     }
                 }
                 is NetworkResource.Error -> Log.e("AniList", "Viewer Query returned no data")
-                is NetworkResource.Loading -> Log.d("Tsundoku", "Loading Viewer Data")
+                is NetworkResource.Loading -> Log.d(APP_NAME, "Loading Viewer Data")
             }
         }
         else -> {

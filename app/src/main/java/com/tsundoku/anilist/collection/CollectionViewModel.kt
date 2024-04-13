@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tsundoku.GetTsundokuCollectionQuery
+import com.tsundoku.UserQuery
 import com.tsundoku.data.NetworkResource
 import com.tsundoku.data.NetworkResource.Companion.asResource
 import com.tsundoku.data.TsundokuFilter
@@ -34,19 +35,21 @@ class CollectionViewModel @Inject constructor(
     private val _collectionUiState = MutableStateFlow(CollectionUiState())
     val collectionUiState: StateFlow<CollectionUiState> = _collectionUiState.asStateFlow()
 
-    fun getTsundokuCollection(viewerId: Int, titleSort: List<MediaListSort?>): StateFlow<NetworkResource<List<GetTsundokuCollectionQuery.List?>>> {
+    fun getTsundokuCollection(viewerId: Int? = null, username: String? = null, titleSort: List<MediaListSort?>): StateFlow<NetworkResource<List<GetTsundokuCollectionQuery.List?>>> {
         return if (collectionUiState.value.onViewer) {
-            userRepo.getTsundokuCollection(null, viewerId, titleSort).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+            userRepo.getTsundokuCollection(username, viewerId, titleSort).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
         } else {
-            userRepo.getTsundokuCollection(collectionUiState.value.curUser, null, titleSort).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+            userRepo.getTsundokuCollection(username, null, titleSort).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
         }
     }
 
+    fun validateSearchedUser(username: String) = userRepo.getSearchedUser(username).asResource().stateIn(viewModelScope, SharingStarted.WhileSubscribed(1000), NetworkResource.loading())
+
     /**
      * Sets the current username for the collection being shown
-     * @param username The AniList username to show the collection for
+     * @param user The AniList searched anilist user data
      */
-    fun setUsername(username: String) = _collectionUiState.update { it.copy(onViewer = false, curUser = username) }
+    fun setSearchedUser(user: UserQuery.User) = _collectionUiState.update { it.copy(onViewer = false, curSearchUser = user) }
 
     val isRefreshing: MutableState<Boolean> = mutableStateOf(false)
     fun setIsRefreshing(new: Boolean) { isRefreshing.value = new }
@@ -57,15 +60,7 @@ class CollectionViewModel @Inject constructor(
      */
     fun onViewer(value: Boolean) = _collectionUiState.update { it.copy(onViewer = value) }
 
-    /**
-     * Sets the index for the current media that the viewer wants to edit so it opens the composable only if the current collection is the viewer's collection
-     * @param index The current index of the media
-     */
-    fun setCurEditingMediaIndex(index: Int) {
-        if (collectionUiState.value.onViewer) {
-            _collectionUiState.update { it.copy(curEditingMediaIndex = index) }
-        }
-    }
+    fun isSuccessfulUserSearch(value: Boolean) = _collectionUiState.update { it.copy(successfulUserSearch = value) }
 
     private val _searchText = MutableStateFlow("")
     val searchText = _searchText.asStateFlow()

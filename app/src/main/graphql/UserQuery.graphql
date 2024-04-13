@@ -9,5 +9,10 @@ query UserQuery($username: String!) {
             medium
         }
         bannerImage
+        mediaListOptions {
+            mangaList {
+                customLists
+            }
+        }
     }
 }

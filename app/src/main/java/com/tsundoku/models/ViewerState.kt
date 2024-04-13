@@ -22,4 +22,5 @@ data class ViewerState(
     var ongoingCount: Float = 0f,
     var finishedCount: Float = 0f,
     var comingSoonCount: Float = 0f,
+    var selectedScreenIndex: Int = 0,
 )
